@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"try { const i = JSON.parse(process.env.CLAUDE_TOOL_INPUT||'{}'); const p = i.file_path||''; if(p.match(/\\.(ts|tsx)$/) && !p.includes('node_modules')) { const {execSync}=require('child_process'); try { execSync('npm run typecheck --silent',{cwd:process.cwd(),stdio:'pipe'}); } catch(e){ const out=(e.stdout||e.stderr||'').toString().trim(); if(out) console.log('[typecheck]\\n'+out.split('\\n').slice(0,12).join('\\n')); } } } catch(e){}\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const {execSync}=require('child_process'); try { const log=execSync('git log --oneline -5 2>&1',{cwd:process.cwd()}).toString().trim(); const st=execSync('git status --short 2>&1',{cwd:process.cwd()}).toString().trim(); console.log('\\n── git ────────────────────────────'); console.log(log||'(no commits yet)'); if(st) console.log('\\nUnstaged:\\n'+st); console.log('\\nDev loop: test:run → typecheck → lint → build → /ship'); console.log('────────────────────────────────────'); } catch(e){}\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx *)",
+      "Bash(git log*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git checkout*)",
+      "Bash(git branch*)",
+      "Bash(prisma *)",
+      "Bash(npx prisma *)"
+    ]
+  }
+}

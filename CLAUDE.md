@@ -396,12 +396,32 @@ Pull from Vercel: `vercel env pull .env.local`
 
 ---
 
+## Custom Slash Commands
+
+Project-level commands in `.claude/commands/`. Invoke as `/command-name [args]`.
+
+| Command | Purpose |
+|---|---|
+| `/scaffold` | Bootstrap Phase 1 from scratch (run once) |
+| `/phase-status` | Check which phase we're on, what to build next, and offer to start |
+| `/new-feature <name>` | Spawn 3 parallel agents (backend + frontend + tests) for a feature |
+| `/ship "commit msg"` | Run full quality gate (test→typecheck→lint→build) then commit + push |
+| `/implementing-drag-drop` | Reference guide for dnd-kit drag-and-drop in this app |
+| `/live-feature` | Reference guide for Pusher real-time features |
+| `/bracket-engine` | Reference guide for `lib/bracket-engine.ts` pure logic |
+| `/db [migrate\|seed\|reset\|status]` | Prisma DB operations |
+
+## Hooks (`.claude/settings.json`)
+
+- **PostToolUse[Write\|Edit]** — runs `typecheck` after editing any `.ts/.tsx` file; prints first 12 error lines if any
+- **Stop** — after each Claude turn, prints last 5 git commits + current git status + dev loop reminder
+
 ## Session Continuity
 
 At the start of any new session, Claude should:
 1. Read this file
-2. Run `git log --oneline -10` to see what was last built
+2. Run `/phase-status` to identify where we are and get a continuation plan
 3. Check `git status` for any in-progress work
-4. Continue from the next item in **Feature Priorities** above
+4. If a feature is partially implemented, finish it before starting the next one
 
 This ensures any new Claude session picks up exactly where the last left off without re-explanation.
