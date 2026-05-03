@@ -8,6 +8,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Form,
@@ -167,7 +168,7 @@ export function TournamentForm({ tournament, onSuccess }: Props) {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <FormLabel>Courts</FormLabel>
+            <Label>Courts</Label>
             <span className="text-xs text-muted-foreground">{fields.length} configured</span>
           </div>
           <div className="space-y-2">

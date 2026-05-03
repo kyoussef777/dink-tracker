@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 
 type AssignableMatch = {
   id: string
@@ -124,15 +123,15 @@ export function AssignMatchDialog({ open, onOpenChange, tournamentId, courtName 
                     {m.team2?.name ?? "TBD"}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" disabled={pending} asChild={false}>
+                <span className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-input bg-background px-3 text-xs font-medium">
                   {assigningId === m.id ? (
-                    <span className="inline-flex items-center gap-1">
+                    <>
                       <Loader2 className="h-3 w-3 animate-spin" /> Assigning
-                    </span>
+                    </>
                   ) : (
                     "Assign"
                   )}
-                </Button>
+                </span>
               </button>
             ))}
           </div>
