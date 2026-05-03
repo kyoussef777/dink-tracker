@@ -8,7 +8,9 @@ export const TournamentCreateSchema = z.object({
   description: z.string().max(1000).optional(),
 })
 
-export const TournamentUpdateSchema = TournamentCreateSchema.partial()
+export const TournamentUpdateSchema = TournamentCreateSchema.partial().extend({
+  status: z.enum(["DRAFT", "REGISTRATION", "ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
+})
 
 export const BracketCreateSchema = z.object({
   tournamentId: z.string().cuid(),

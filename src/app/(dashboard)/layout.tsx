@@ -6,8 +6,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
-          <Link href="/tournaments" className="flex items-center gap-2 font-bold text-lg">
-            <span className="text-primary">🏓</span>
+          <Link href="/tournaments" className="flex items-center gap-2 font-bold text-lg tracking-tight">
+            <span className="inline-block h-6 w-6 rounded-md bg-primary" aria-hidden="true" />
             <span>Dink Tracker</span>
           </Link>
           <nav className="flex items-center gap-6">

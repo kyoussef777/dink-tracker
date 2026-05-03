@@ -30,6 +30,7 @@ model Bracket {
   skillLevel   String
   format       BracketFormat @default(SINGLE_ELIMINATION)
   status       BracketStatus @default(PENDING)
+  rounds       Int           @default(0)
   teams        Team[]
   matches      Match[]
   createdAt    DateTime      @default(now())
