@@ -16,6 +16,7 @@ model Tournament {
   endDate     DateTime?
   status      TournamentStatus @default(DRAFT)
   description String?
+  courtNames  String[]         @default([])
   createdBy   String
   brackets    Bracket[]
   entries     PlayerEntry[]

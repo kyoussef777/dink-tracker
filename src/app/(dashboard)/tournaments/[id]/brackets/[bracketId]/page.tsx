@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/EmptyState"
 import { BracketTree } from "@/components/bracket/BracketTree"
 import { AddTeamsForm } from "@/components/bracket/AddTeamsForm"
 import { BracketActions } from "@/components/bracket/BracketActions"
+import { LiveSubscriber } from "@/components/shared/LiveSubscriber"
 import type { BracketStatus } from "@prisma/client"
 
 const formatLabel: Record<string, string> = {
@@ -31,7 +32,7 @@ export default async function BracketDetailPage({
   const bracket = await db.bracket.findFirst({
     where: { id: bracketId, tournament: { createdBy: userId, id: tournamentId } },
     include: {
-      tournament: { select: { id: true, name: true } },
+      tournament: { select: { id: true, name: true, courtNames: true } },
       teams: { include: { players: true }, orderBy: { seed: "asc" } },
       matches: {
         include: { team1: true, team2: true, winner: true },
@@ -43,9 +44,11 @@ export default async function BracketDetailPage({
   if (!bracket) notFound()
 
   const hasTeams = bracket.teams.length > 0
+  const courtOptions = bracket.tournament.courtNames
 
   return (
     <div className="space-y-8">
+      <LiveSubscriber tournamentId={tournamentId} />
       <div>
         <Link
           href={`/tournaments/${tournamentId}`}
@@ -92,7 +95,11 @@ export default async function BracketDetailPage({
             {bracket.matches.length === 0 ? (
               <EmptyState title="No matches generated" description="Try recreating this bracket." />
             ) : (
-              <BracketTree matches={bracket.matches} totalRounds={bracket.rounds} />
+              <BracketTree
+                matches={bracket.matches}
+                totalRounds={bracket.rounds}
+                courtOptions={courtOptions}
+              />
             )}
           </section>
 

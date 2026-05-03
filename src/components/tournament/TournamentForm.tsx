@@ -1,9 +1,10 @@
 "use client"
-import { useForm } from "react-hook-form"
+import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +27,9 @@ const FormSchema = z
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().optional(),
     description: z.string().max(1000).optional(),
+    courts: z
+      .array(z.object({ name: z.string().min(1, "Required").max(50) }))
+      .max(64),
   })
   .refine((d) => !d.endDate || new Date(d.endDate) >= new Date(d.startDate), {
     message: "End date must be on or after start date",
@@ -51,18 +55,25 @@ export function TournamentForm({ tournament, onSuccess }: Props) {
       startDate: tournament ? new Date(tournament.startDate).toISOString().slice(0, 10) : "",
       endDate: tournament?.endDate ? new Date(tournament.endDate).toISOString().slice(0, 10) : "",
       description: tournament?.description ?? "",
+      courts: (tournament?.courtNames ?? []).map((name) => ({ name })),
     },
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "courts",
   })
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
     try {
       const payload = {
-        ...values,
+        name: values.name,
         startDate: new Date(values.startDate).toISOString(),
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         venue: values.venue || undefined,
         description: values.description || undefined,
+        courtNames: values.courts.map((c) => c.name.trim()).filter(Boolean),
       }
 
       const res = await fetch(
@@ -86,6 +97,10 @@ export function TournamentForm({ tournament, onSuccess }: Props) {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function addCourt() {
+    append({ name: `Court ${fields.length + 1}` })
   }
 
   return (
@@ -149,6 +164,52 @@ export function TournamentForm({ tournament, onSuccess }: Props) {
             )}
           />
         </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <FormLabel>Courts</FormLabel>
+            <span className="text-xs text-muted-foreground">{fields.length} configured</span>
+          </div>
+          <div className="space-y-2">
+            {fields.map((f, i) => (
+              <div key={f.id} className="flex items-center gap-2">
+                <FormField
+                  control={form.control}
+                  name={`courts.${i}.name` as const}
+                  render={({ field }) => (
+                    <FormItem className="flex-1 space-y-0">
+                      <FormControl>
+                        <Input placeholder={`Court ${i + 1}`} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(i)}
+                  aria-label={`Remove court ${i + 1}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addCourt}
+            disabled={fields.length >= 64}
+            className="gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add court
+          </Button>
+        </div>
+
         <FormField
           control={form.control}
           name="description"

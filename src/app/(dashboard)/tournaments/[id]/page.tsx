@@ -2,7 +2,9 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
 import { db } from "@/lib/db"
-import { Calendar, MapPin, ChevronLeft } from "lucide-react"
+import { Calendar, MapPin, ChevronLeft, LayoutGrid } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { LiveSubscriber } from "@/components/shared/LiveSubscriber"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Separator } from "@/components/ui/separator"
@@ -34,6 +36,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
   return (
     <div className="space-y-8">
+      <LiveSubscriber tournamentId={tournament.id} />
       <div>
         <Link
           href="/tournaments"
@@ -66,7 +69,15 @@ export default async function TournamentDetailPage({ params }: { params: Promise
             <p className="max-w-2xl text-sm text-muted-foreground leading-relaxed">{tournament.description}</p>
           )}
         </div>
-        <TournamentActions tournament={tournament} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href={`/tournaments/${tournament.id}/courts`}>
+              <LayoutGrid className="h-4 w-4" />
+              Courts ({tournament.courtNames.length})
+            </Link>
+          </Button>
+          <TournamentActions tournament={tournament} />
+        </div>
       </div>
 
       <Separator />

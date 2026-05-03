@@ -1,4 +1,4 @@
-import { MatchCard } from "./MatchCard"
+import { EditableMatchCard } from "@/components/match/EditableMatchCard"
 import type { Match, Team } from "@prisma/client"
 
 type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: Team | null }
@@ -6,9 +6,10 @@ type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: 
 interface Props {
   matches: MatchWithTeams[]
   totalRounds: number
+  courtOptions: string[]
 }
 
-export function BracketTree({ matches, totalRounds }: Props) {
+export function BracketTree({ matches, totalRounds, courtOptions }: Props) {
   const matchesByRound = new Map<number, MatchWithTeams[]>()
   for (const m of matches) {
     const arr = matchesByRound.get(m.round) ?? []
@@ -34,7 +35,7 @@ export function BracketTree({ matches, totalRounds }: Props) {
                 }}
               >
                 {roundMatches.map((m) => (
-                  <MatchCard key={m.id} match={m} />
+                  <EditableMatchCard key={m.id} match={m} courtOptions={courtOptions} />
                 ))}
               </div>
             </div>

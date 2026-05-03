@@ -6,6 +6,11 @@ export const TournamentCreateSchema = z.object({
   startDate: z.string().datetime(),
   endDate: z.string().datetime().optional(),
   description: z.string().max(1000).optional(),
+  courtNames: z.array(z.string().min(1).max(50)).max(64).optional(),
+})
+
+export const MatchAssignSchema = z.object({
+  court: z.string().max(50).nullable(),
 })
 
 export const TournamentUpdateSchema = TournamentCreateSchema.partial().extend({
@@ -32,7 +37,7 @@ export const MatchUpdateSchema = z.object({
   score1: z.array(z.number().int().min(0)).optional(),
   score2: z.array(z.number().int().min(0)).optional(),
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "BYE"]).optional(),
-  court: z.string().max(50).optional(),
+  court: z.string().max(50).nullable().optional(),
   winnerId: z.string().cuid().optional(),
 })
 
