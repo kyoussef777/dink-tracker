@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Tournament {
+  id          String           @id @default(cuid())
+  name        String
+  venue       String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      TournamentStatus @default(DRAFT)
+  description String?
+  createdBy   String
+  brackets    Bracket[]
+  entries     PlayerEntry[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Bracket {
+  id           String        @id @default(cuid())
+  tournamentId String
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  skillLevel   String
+  format       BracketFormat @default(SINGLE_ELIMINATION)
+  status       BracketStatus @default(PENDING)
+  teams        Team[]
+  matches      Match[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Team {
+  id         String  @id @default(cuid())
+  bracketId  String
+  bracket    Bracket @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  name       String
+  seed       Int?
+  players    Player[]
+  matchesAs1 Match[]  @relation("Team1")
+  matchesAs2 Match[]  @relation("Team2")
+  wonMatches Match[]  @relation("Winner")
+}
+
+model Player {
+  id     String  @id @default(cuid())
+  teamId String
+  team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name   String
+  rating Float?
+  email  String?
+  phone  String?
+}
+
+model Match {
+  id               String      @id @default(cuid())
+  bracketId        String
+  bracket          Bracket     @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  round            Int
+  position         Int
+  team1Id          String?
+  team1            Team?       @relation("Team1", fields: [team1Id], references: [id])
+  team2Id          String?
+  team2            Team?       @relation("Team2", fields: [team2Id], references: [id])
+  winnerId         String?
+  winner           Team?       @relation("Winner", fields: [winnerId], references: [id])
+  score1           Int[]
+  score2           Int[]
+  court            String?
+  status           MatchStatus @default(PENDING)
+  fromMatch1Pos    Int?
+  fromMatch2Pos    Int?
+  scheduledAt      DateTime?
+  completedAt      DateTime?
+
+  @@unique([bracketId, position])
+}
+
+model PlayerEntry {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  rating       Float?
+  email        String?
+  createdAt    DateTime   @default(now())
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BracketFormat {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  ROUND_ROBIN
+  POOL_PLAY
+}
+
+enum BracketStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+}
+
+enum MatchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BYE
+}
