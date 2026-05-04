@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { notFound } from "next/navigation"
-import { auth } from "@clerk/nextjs/server"
+import { notFound, redirect } from "next/navigation"
+import { getCurrentRole } from "@/lib/auth"
 import { ChevronLeft } from "lucide-react"
 import { db } from "@/lib/db"
 import { Separator } from "@/components/ui/separator"
@@ -11,11 +11,12 @@ import { CourtCard } from "@/components/match/CourtCard"
 
 export default async function CourtsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { userId } = await auth()
-  if (!userId) notFound()
+  const current = await getCurrentRole()
+  if (!current) redirect("/sign-in")
+  if (current.role !== "ADMIN") redirect(`/tournaments/${id}`)
 
   const tournament = await db.tournament.findFirst({
-    where: { id, createdBy: userId },
+    where: { id, createdBy: current.userId },
     select: { id: true, name: true, courtNames: true },
   })
   if (!tournament) notFound()

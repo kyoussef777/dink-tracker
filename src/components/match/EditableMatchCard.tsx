@@ -9,9 +9,10 @@ type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: 
 interface Props {
   match: MatchWithTeams
   courtOptions: string[]
+  highlightTeamIds?: string[]
 }
 
-export function EditableMatchCard({ match, courtOptions }: Props) {
+export function EditableMatchCard({ match, courtOptions, highlightTeamIds }: Props) {
   const [open, setOpen] = useState(false)
   const disabled = match.status === "BYE"
 
@@ -24,7 +25,7 @@ export function EditableMatchCard({ match, courtOptions }: Props) {
         className="block w-full text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-ring rounded-lg disabled:cursor-not-allowed disabled:hover:translate-y-0"
         aria-label={`Edit match ${match.team1?.name ?? "TBD"} vs ${match.team2?.name ?? "TBD"}`}
       >
-        <MatchCard match={match} />
+        <MatchCard match={match} highlightTeamIds={highlightTeamIds} />
       </button>
       <MatchEditDialog
         open={open}

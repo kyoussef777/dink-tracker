@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
-import { requireUser, parseBody } from "@/lib/api"
+import { parseBody } from "@/lib/api"
+import { requireAdmin } from "@/lib/auth"
 import { MatchUpdateSchema } from "@/lib/validators"
 import { pusherServer } from "@/lib/pusher"
 import type { Prisma } from "@prisma/client"
@@ -7,7 +8,7 @@ import type { Prisma } from "@prisma/client"
 type Params = { params: Promise<{ id: string }> }
 
 export async function PATCH(req: Request, { params }: Params) {
-  const userId = await requireUser()
+  const userId = await requireAdmin()
   if (userId instanceof Response) return userId
 
   const { id } = await params

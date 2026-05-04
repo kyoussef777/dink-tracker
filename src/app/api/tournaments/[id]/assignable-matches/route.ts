@@ -1,10 +1,10 @@
 import { db } from "@/lib/db"
-import { requireUser } from "@/lib/api"
+import { requireAdmin } from "@/lib/auth"
 
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(_req: Request, { params }: Params) {
-  const userId = await requireUser()
+  const userId = await requireAdmin()
   if (userId instanceof Response) return userId
 
   const { id } = await params

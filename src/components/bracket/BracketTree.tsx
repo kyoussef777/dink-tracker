@@ -1,4 +1,5 @@
 import { EditableMatchCard } from "@/components/match/EditableMatchCard"
+import { MatchCard } from "@/components/bracket/MatchCard"
 import type { Match, Team } from "@prisma/client"
 
 type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: Team | null }
@@ -7,9 +8,11 @@ interface Props {
   matches: MatchWithTeams[]
   totalRounds: number
   courtOptions: string[]
+  readOnly?: boolean
+  highlightTeamIds?: string[]
 }
 
-export function BracketTree({ matches, totalRounds, courtOptions }: Props) {
+export function BracketTree({ matches, totalRounds, courtOptions, readOnly, highlightTeamIds }: Props) {
   const matchesByRound = new Map<number, MatchWithTeams[]>()
   for (const m of matches) {
     const arr = matchesByRound.get(m.round) ?? []
@@ -34,9 +37,18 @@ export function BracketTree({ matches, totalRounds, courtOptions }: Props) {
                   gap: round === 1 ? "0.75rem" : `${Math.pow(2, round - 1) * 0.75}rem`,
                 }}
               >
-                {roundMatches.map((m) => (
-                  <EditableMatchCard key={m.id} match={m} courtOptions={courtOptions} />
-                ))}
+                {roundMatches.map((m) =>
+                  readOnly ? (
+                    <MatchCard key={m.id} match={m} highlightTeamIds={highlightTeamIds} />
+                  ) : (
+                    <EditableMatchCard
+                      key={m.id}
+                      match={m}
+                      courtOptions={courtOptions}
+                      highlightTeamIds={highlightTeamIds}
+                    />
+                  )
+                )}
               </div>
             </div>
           )

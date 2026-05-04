@@ -5,6 +5,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/t/(.*)", // public tournament share URLs (Phase 5)
+  "/api/webhooks/(.*)",
 ])
 
 export default clerkMiddleware(async (auth, request) => {

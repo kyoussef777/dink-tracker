@@ -1,10 +1,11 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
-import { auth } from "@clerk/nextjs/server"
 import { db } from "@/lib/db"
+import { getCurrentRole } from "@/lib/auth"
 import { ChevronLeft, Users } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { BracketTree } from "@/components/bracket/BracketTree"
@@ -26,11 +27,20 @@ export default async function BracketDetailPage({
   params: Promise<{ id: string; bracketId: string }>
 }) {
   const { id: tournamentId, bracketId } = await params
-  const { userId } = await auth()
-  if (!userId) notFound()
+  const current = await getCurrentRole()
+  if (!current) redirect("/sign-in")
+
+  const isAdmin = current.role === "ADMIN"
+  const where = isAdmin
+    ? { id: bracketId, tournament: { createdBy: current.userId, id: tournamentId } }
+    : {
+        id: bracketId,
+        tournament: { id: tournamentId },
+        teams: { some: { players: { some: { userId: current.userId } } } },
+      }
 
   const bracket = await db.bracket.findFirst({
-    where: { id: bracketId, tournament: { createdBy: userId, id: tournamentId } },
+    where,
     include: {
       tournament: { select: { id: true, name: true, courtNames: true } },
       teams: { include: { players: true }, orderBy: { seed: "asc" } },
@@ -45,6 +55,9 @@ export default async function BracketDetailPage({
 
   const hasTeams = bracket.teams.length > 0
   const courtOptions = bracket.tournament.courtNames
+  const myTeamIds = bracket.teams
+    .filter((t) => t.players.some((p) => p.userId === current.userId))
+    .map((t) => t.id)
 
   return (
     <div className="space-y-8">
@@ -65,24 +78,36 @@ export default async function BracketDetailPage({
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">{bracket.skillLevel}</h1>
             <StatusBadge kind="bracket" status={bracket.status as BracketStatus} />
+            {!isAdmin && myTeamIds.length > 0 && (
+              <Badge variant="outline" className="border-primary/40 text-primary">
+                Read-only
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">{formatLabel[bracket.format] ?? bracket.format}</p>
         </div>
-        <BracketActions bracketId={bracket.id} tournamentId={tournamentId} />
+        {isAdmin && <BracketActions bracketId={bracket.id} tournamentId={tournamentId} />}
       </div>
 
       <Separator />
 
       {!hasTeams ? (
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Add teams</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Enter at least 2 teams. We&apos;ll generate the bracket automatically based on the format you chose.
-            </p>
-          </div>
-          <AddTeamsForm bracketId={bracket.id} />
-        </section>
+        isAdmin ? (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">Add teams</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Enter at least 2 teams. We&apos;ll generate the bracket automatically based on the format you chose.
+              </p>
+            </div>
+            <AddTeamsForm bracketId={bracket.id} />
+          </section>
+        ) : (
+          <EmptyState
+            title="No teams added yet"
+            description="The organizer hasn't entered teams for this bracket yet. Check back soon."
+          />
+        )
       ) : (
         <>
           <section className="space-y-4">
@@ -99,6 +124,8 @@ export default async function BracketDetailPage({
                 matches={bracket.matches}
                 totalRounds={bracket.rounds}
                 courtOptions={courtOptions}
+                readOnly={!isAdmin}
+                highlightTeamIds={myTeamIds}
               />
             )}
           </section>
@@ -106,26 +133,36 @@ export default async function BracketDetailPage({
           <section className="space-y-4">
             <h2 className="text-xl font-semibold tracking-tight">Teams</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {bracket.teams.map((team) => (
-                <Card key={team.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-base">{team.name}</CardTitle>
-                      {team.seed != null && (
-                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                          Seed {team.seed}
-                        </span>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-1.5 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" />
-                      {team.players.map((p) => p.name).join(" / ")}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {bracket.teams.map((team) => {
+                const mine = myTeamIds.includes(team.id)
+                return (
+                  <Card key={team.id} className={mine ? "border-primary/40" : undefined}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-base">
+                          {team.name}
+                          {mine && (
+                            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                              You
+                            </span>
+                          )}
+                        </CardTitle>
+                        {team.seed != null && (
+                          <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                            Seed {team.seed}
+                          </span>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5" />
+                        {team.players.map((p) => p.name).join(" / ")}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           </section>
         </>

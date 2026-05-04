@@ -58,6 +58,10 @@ model Player {
   rating Float?
   email  String?
   phone  String?
+  userId String?
+
+  @@index([userId])
+  @@index([email])
 }
 
 model Match {

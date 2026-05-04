@@ -1,13 +1,19 @@
 import { db } from "@/lib/db"
-import { requireUser, parseBody } from "@/lib/api"
+import { parseBody } from "@/lib/api"
+import { getCurrentRole, requireAdmin } from "@/lib/auth"
 import { TournamentCreateSchema } from "@/lib/validators"
 
 export async function GET() {
-  const userId = await requireUser()
-  if (userId instanceof Response) return userId
+  const current = await getCurrentRole()
+  if (!current) return Response.json({ error: "Unauthorized" }, { status: 401 })
+
+  const where =
+    current.role === "ADMIN"
+      ? { createdBy: current.userId }
+      : { brackets: { some: { teams: { some: { players: { some: { userId: current.userId } } } } } } }
 
   const tournaments = await db.tournament.findMany({
-    where: { createdBy: userId },
+    where,
     orderBy: { startDate: "desc" },
     include: { _count: { select: { brackets: true } } },
   })
@@ -16,7 +22,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const userId = await requireUser()
+  const userId = await requireAdmin()
   if (userId instanceof Response) return userId
 
   const data = await parseBody(req, TournamentCreateSchema)

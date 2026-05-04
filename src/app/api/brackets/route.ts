@@ -1,9 +1,10 @@
 import { db } from "@/lib/db"
-import { requireUser, parseBody } from "@/lib/api"
+import { parseBody } from "@/lib/api"
+import { requireAdmin } from "@/lib/auth"
 import { BracketCreateSchema } from "@/lib/validators"
 
 export async function POST(req: Request) {
-  const userId = await requireUser()
+  const userId = await requireAdmin()
   if (userId instanceof Response) return userId
 
   const data = await parseBody(req, BracketCreateSchema)

@@ -1,16 +1,24 @@
 import { db } from "@/lib/db"
-import { requireUser, parseBody } from "@/lib/api"
+import { parseBody } from "@/lib/api"
+import { getCurrentRole, requireAdmin } from "@/lib/auth"
 import { TournamentUpdateSchema } from "@/lib/validators"
 
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(_req: Request, { params }: Params) {
-  const userId = await requireUser()
-  if (userId instanceof Response) return userId
+  const current = await getCurrentRole()
+  if (!current) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
+  const where =
+    current.role === "ADMIN"
+      ? { id, createdBy: current.userId }
+      : {
+          id,
+          brackets: { some: { teams: { some: { players: { some: { userId: current.userId } } } } } },
+        }
   const tournament = await db.tournament.findFirst({
-    where: { id, createdBy: userId },
+    where,
     include: {
       brackets: {
         include: { teams: true, _count: { select: { matches: true } } },
@@ -24,7 +32,7 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
-  const userId = await requireUser()
+  const userId = await requireAdmin()
   if (userId instanceof Response) return userId
 
   const { id } = await params
@@ -47,7 +55,7 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
-  const userId = await requireUser()
+  const userId = await requireAdmin()
   if (userId instanceof Response) return userId
 
   const { id } = await params

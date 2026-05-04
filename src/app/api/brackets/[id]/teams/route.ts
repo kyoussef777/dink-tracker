@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
-import { requireUser, parseBody } from "@/lib/api"
+import { parseBody } from "@/lib/api"
+import { requireAdmin } from "@/lib/auth"
 import { z } from "zod"
 import { generateSingleElimination, generateRoundRobin } from "@/lib/bracket-engine"
 
@@ -20,7 +21,7 @@ const AddTeamsSchema = z.object({
 type Params = { params: Promise<{ id: string }> }
 
 export async function POST(req: Request, { params }: Params) {
-  const userId = await requireUser()
+  const userId = await requireAdmin()
   if (userId instanceof Response) return userId
 
   const { id } = await params

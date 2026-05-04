@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { Badge } from "@/components/ui/badge"
 import { Trophy, Users } from "lucide-react"
 import type { Bracket, BracketStatus } from "@prisma/client"
 
@@ -10,6 +11,7 @@ interface Props {
   teamCount: number
   matchCount: number
   completedMatches: number
+  youAreIn?: boolean
 }
 
 const formatLabel: Record<string, string> = {
@@ -19,7 +21,14 @@ const formatLabel: Record<string, string> = {
   POOL_PLAY: "Pool play",
 }
 
-export function BracketSummaryCard({ bracket, tournamentId, teamCount, matchCount, completedMatches }: Props) {
+export function BracketSummaryCard({
+  bracket,
+  tournamentId,
+  teamCount,
+  matchCount,
+  completedMatches,
+  youAreIn,
+}: Props) {
   const progress = matchCount > 0 ? Math.round((completedMatches / matchCount) * 100) : 0
 
   return (
@@ -36,7 +45,14 @@ export function BracketSummaryCard({ bracket, tournamentId, teamCount, matchCoun
                 {bracket.skillLevel}
               </h3>
             </div>
-            <StatusBadge kind="bracket" status={bracket.status as BracketStatus} />
+            <div className="flex flex-col items-end gap-1.5">
+              <StatusBadge kind="bracket" status={bracket.status as BracketStatus} />
+              {youAreIn && (
+                <Badge variant="outline" className="border-primary/40 text-[10px] text-primary">
+                  You&apos;re in
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3 pb-5 text-sm">
