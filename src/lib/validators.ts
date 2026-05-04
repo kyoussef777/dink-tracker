@@ -9,10 +9,6 @@ export const TournamentCreateSchema = z.object({
   courtNames: z.array(z.string().min(1).max(50)).max(64).optional(),
 })
 
-export const MatchAssignSchema = z.object({
-  court: z.string().max(50).nullable(),
-})
-
 export const TournamentUpdateSchema = TournamentCreateSchema.partial().extend({
   status: z.enum(["DRAFT", "REGISTRATION", "ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
 })

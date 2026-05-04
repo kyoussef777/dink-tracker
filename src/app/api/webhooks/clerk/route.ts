@@ -1,15 +1,13 @@
 import { Webhook } from "svix"
 import { isAllowlistAdmin, setUserRole, type Role } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { autoLinkPlayersByEmail } from "@/lib/player-link"
 
-type ClerkEmail = { email_address: string; id: string }
 type ClerkUserPayload = {
   id: string
-  email_addresses: ClerkEmail[]
+  email_addresses: { id: string; email_address: string }[]
   primary_email_address_id: string | null
   public_metadata: Record<string, unknown>
 }
-type ClerkEvent = { type: string; data: ClerkUserPayload }
 
 export async function POST(req: Request) {
   const secret = process.env.CLERK_WEBHOOK_SECRET
@@ -25,29 +23,26 @@ export async function POST(req: Request) {
   }
 
   const body = await req.text()
-  let evt: ClerkEvent
+  let evt: { type: string; data: ClerkUserPayload }
   try {
-    evt = new Webhook(secret).verify(body, headers) as ClerkEvent
+    evt = new Webhook(secret).verify(body, headers) as { type: string; data: ClerkUserPayload }
   } catch {
     return Response.json({ error: "Invalid signature" }, { status: 401 })
   }
 
-  if (evt.type === "user.created" || evt.type === "user.updated") {
-    const user = evt.data
-    const primary = user.email_addresses.find((e) => e.id === user.primary_email_address_id)
-    const email = primary?.email_address ?? null
-
-    const existing = (user.public_metadata?.role as Role | undefined) ?? null
-    const desired: Role = isAllowlistAdmin(email) ? "ADMIN" : existing ?? "PLAYER"
-    if (existing !== desired) await setUserRole(user.id, desired)
-
-    if (email) {
-      await db.player.updateMany({
-        where: { email: { equals: email, mode: "insensitive" }, userId: null },
-        data: { userId: user.id },
-      })
-    }
+  if (evt.type !== "user.created" && evt.type !== "user.updated") {
+    return Response.json({ ok: true })
   }
+
+  const user = evt.data
+  const email =
+    user.email_addresses.find((e) => e.id === user.primary_email_address_id)?.email_address ?? null
+
+  const existing = (user.public_metadata?.role as Role | undefined) ?? null
+  const desired: Role = isAllowlistAdmin(email) ? "ADMIN" : existing ?? "PLAYER"
+  if (existing !== desired) await setUserRole(user.id, desired)
+
+  await autoLinkPlayersByEmail(user.id, email)
 
   return Response.json({ ok: true })
 }
