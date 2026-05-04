@@ -35,14 +35,14 @@ export default async function AdminUsersPage() {
               return (
                 <li key={u.id} className="flex items-center justify-between gap-4 px-4 py-3">
                   <div className="min-w-0 space-y-0.5">
-                    <p className="truncate text-sm font-medium">
-                      {name}
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium">{name}</p>
                       {isSelf && (
-                        <Badge variant="outline" className="ml-2 text-[10px]">
+                        <Badge variant="outline" className="text-[10px]">
                           You
                         </Badge>
                       )}
-                    </p>
+                    </div>
                     <p className="truncate text-xs text-muted-foreground">{email}</p>
                   </div>
                   <UserRoleToggle userId={u.id} initialRole={role} isSelf={isSelf} />
