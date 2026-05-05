@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Card, CardContent } from "@/components/ui/card"
+import { TeamsCsvImport, type ImportedTeam } from "./TeamsCsvImport"
+
+const emailField = z.string().email("Invalid email").optional().or(z.literal(""))
 
 const TeamSchema = z.object({
   name: z.string().min(1, "Team name required").max(100),
   player1: z.string().min(1, "Player name required").max(100),
+  player1Email: emailField,
   player2: z.string().max(100).optional(),
+  player2Email: emailField,
 })
 
 const FormSchema = z.object({
@@ -23,7 +28,7 @@ const FormSchema = z.object({
 
 type FormValues = z.infer<typeof FormSchema>
 
-const emptyTeam = { name: "", player1: "", player2: "" }
+const emptyTeam = { name: "", player1: "", player1Email: "", player2: "", player2Email: "" }
 
 export function AddTeamsForm({ bracketId }: { bracketId: string }) {
   const router = useRouter()
@@ -34,7 +39,19 @@ export function AddTeamsForm({ bracketId }: { bracketId: string }) {
     defaultValues: { teams: [{ ...emptyTeam }, { ...emptyTeam }, { ...emptyTeam }, { ...emptyTeam }] },
   })
 
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: "teams" })
+  const { fields, append, remove, replace } = useFieldArray({ control: form.control, name: "teams" })
+
+  function handleImport(teams: ImportedTeam[]) {
+    replace(
+      teams.map((t) => ({
+        name: t.name,
+        player1: t.player1,
+        player1Email: t.player1Email ?? "",
+        player2: t.player2 ?? "",
+        player2Email: t.player2Email ?? "",
+      }))
+    )
+  }
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
@@ -42,7 +59,12 @@ export function AddTeamsForm({ bracketId }: { bracketId: string }) {
       const payload = {
         teams: values.teams.map((t) => ({
           name: t.name,
-          players: [{ name: t.player1 }, ...(t.player2 ? [{ name: t.player2 }] : [])],
+          players: [
+            { name: t.player1, ...(t.player1Email ? { email: t.player1Email } : {}) },
+            ...(t.player2
+              ? [{ name: t.player2, ...(t.player2Email ? { email: t.player2Email } : {}) }]
+              : []),
+          ],
         })),
       }
 
@@ -66,6 +88,12 @@ export function AddTeamsForm({ bracketId }: { bracketId: string }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            Add emails so players can sign in and follow their bracket.
+          </p>
+          <TeamsCsvImport onImport={handleImport} />
+        </div>
         <div className="space-y-3">
           {fields.map((field, index) => (
             <Card key={field.id} className="border-muted">
@@ -74,7 +102,7 @@ export function AddTeamsForm({ bracketId }: { bracketId: string }) {
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-muted text-sm font-semibold text-muted-foreground">
                     {index + 1}
                   </div>
-                  <div className="grid flex-1 gap-3 sm:grid-cols-3">
+                  <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                     <FormField
                       control={form.control}
                       name={`teams.${index}.name`}
@@ -103,6 +131,21 @@ export function AddTeamsForm({ bracketId }: { bracketId: string }) {
                     />
                     <FormField
                       control={form.control}
+                      name={`teams.${index}.player1Email`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">
+                            Player 1 email <span className="lowercase italic">(optional)</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="alex@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
                       name={`teams.${index}.player2`}
                       render={({ field }) => (
                         <FormItem>
@@ -111,6 +154,21 @@ export function AddTeamsForm({ bracketId }: { bracketId: string }) {
                           </FormLabel>
                           <FormControl>
                             <Input placeholder="Jamie Lee" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`teams.${index}.player2Email`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">
+                            Player 2 email <span className="lowercase italic">(optional)</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="jamie@example.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

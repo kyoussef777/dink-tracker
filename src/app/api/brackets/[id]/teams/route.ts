@@ -3,6 +3,8 @@ import { parseBody } from "@/lib/api"
 import { requireAdmin } from "@/lib/auth"
 import { z } from "zod"
 import { generateBracket } from "@/lib/bracket-engine"
+import { autoLinkPlayersByEmail } from "@/lib/player-link"
+import { clerkClient } from "@clerk/nextjs/server"
 
 const AddTeamsSchema = z.object({
   teams: z
@@ -10,7 +12,13 @@ const AddTeamsSchema = z.object({
       z.object({
         name: z.string().min(1).max(100),
         players: z
-          .array(z.object({ name: z.string().min(1).max(100), rating: z.number().min(0).max(7).optional() }))
+          .array(
+            z.object({
+              name: z.string().min(1).max(100),
+              email: z.string().email().optional(),
+              rating: z.number().min(0).max(7).optional(),
+            })
+          )
           .min(1)
           .max(4),
       })
@@ -73,5 +81,24 @@ export async function POST(req: Request, { params }: Params) {
     data: { rounds: generated.totalRounds, status: "ACTIVE" },
   })
 
+  await linkPlayersByEmail(data.teams.flatMap((t) => t.players.map((p) => p.email).filter(Boolean) as string[]))
+
   return Response.json({ data: { teamCount: created.length, matchCount: generated.matches.length } }, { status: 201 })
+}
+
+async function linkPlayersByEmail(emails: string[]) {
+  if (emails.length === 0) return
+  const unique = Array.from(new Set(emails.map((e) => e.toLowerCase())))
+  const client = await clerkClient()
+  await Promise.all(
+    unique.map(async (email) => {
+      try {
+        const { data } = await client.users.getUserList({ emailAddress: [email], limit: 1 })
+        const user = data[0]
+        if (user) await autoLinkPlayersByEmail(user.id, email)
+      } catch {
+        // ignore lookup errors; webhook will pick up linkage on next sign-in
+      }
+    })
+  )
 }
