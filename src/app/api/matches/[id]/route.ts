@@ -127,7 +127,24 @@ async function maybeCompleteBracket(bracketId: string) {
   const remaining = await db.match.count({
     where: { bracketId, status: { in: ["PENDING", "IN_PROGRESS"] } },
   })
-  if (remaining === 0) {
-    await db.bracket.update({ where: { id: bracketId }, data: { status: "COMPLETED" } })
+  if (remaining > 0) return
+
+  const bracket = await db.bracket.update({
+    where: { id: bracketId },
+    data: { status: "COMPLETED" },
+    select: { tournamentId: true },
+  })
+
+  const remainingBrackets = await db.bracket.count({
+    where: { tournamentId: bracket.tournamentId, status: { not: "COMPLETED" } },
+  })
+  if (remainingBrackets === 0) {
+    await db.tournament.update({
+      where: { id: bracket.tournamentId },
+      data: { status: "COMPLETED" },
+    })
+    await pusherServer
+      .trigger(`tournament-${bracket.tournamentId}`, "tournament-status-changed", {})
+      .catch(() => {})
   }
 }

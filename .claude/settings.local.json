@@ -5,7 +5,13 @@
       "PowerShell(Set-Location \"C:\\\\Users\\\\kamal\\\\Documents\\\\dink-tracker\"; $env:DATABASE_URL=\"postgresql://placeholder:placeholder@localhost:5432/dink_tracker\"; $env:DIRECT_URL=\"postgresql://placeholder:placeholder@localhost:5432/dink_tracker\"; npx prisma generate 2>&1)",
       "mcp__plugin_vercel_vercel__list_teams",
       "mcp__plugin_vercel_vercel__list_projects",
-      "mcp__plugin_vercel_vercel__deploy_to_vercel"
+      "mcp__plugin_vercel_vercel__deploy_to_vercel",
+      "Bash(curl -s -o /dev/null -w \"tournaments=%{http_code}\\\\n\" http://localhost:3000/tournaments)",
+      "Bash(curl -s -o /dev/null -w \"root=%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl *)",
+      "Bash(npm install *)",
+      "Bash(tasklist)",
+      "PowerShell(Get-Process *)"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import type { Match, Team, MatchStatus } from "@prisma/client"
+import type { Match, Team } from "@prisma/client"
 
 interface Props {
   match: Match & { team1: Team | null; team2: Team | null; winner: Team | null }
@@ -112,9 +112,3 @@ function TeamRow({
   )
 }
 
-export const matchCardStatusClasses: Record<MatchStatus, string> = {
-  PENDING: "",
-  IN_PROGRESS: "border-accent",
-  COMPLETED: "",
-  BYE: "opacity-60",
-}

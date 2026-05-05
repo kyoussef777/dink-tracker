@@ -21,12 +21,12 @@ export function BracketTree({ matches, totalRounds, courtOptions, readOnly, high
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex min-w-max items-stretch gap-8">
+    <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
+      <div className="flex min-w-max items-stretch gap-6 sm:gap-8">
         {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => {
           const roundMatches = (matchesByRound.get(round) ?? []).sort((a, b) => a.position - b.position)
           return (
-            <div key={round} className="flex w-64 shrink-0 flex-col">
+            <div key={round} className="flex w-60 shrink-0 flex-col sm:w-64">
               <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {roundLabel(round, totalRounds)}
               </h4>

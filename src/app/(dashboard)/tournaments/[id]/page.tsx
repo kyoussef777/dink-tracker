@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Separator } from "@/components/ui/separator"
 import { TournamentActions } from "@/components/tournament/TournamentActions"
+import { ShareButton } from "@/components/tournament/ShareButton"
 import { CreateBracketDialog } from "@/components/bracket/CreateBracketDialog"
 import { BracketSummaryCard } from "@/components/bracket/BracketSummaryCard"
 import { BracketSkillFilter } from "@/components/bracket/BracketSkillFilter"
@@ -96,6 +97,7 @@ export default async function TournamentDetailPage({
         </div>
         {isAdmin && (
           <div className="flex flex-wrap items-center gap-2">
+            <ShareButton tournamentId={tournament.id} />
             <Button asChild variant="outline" size="sm" className="gap-1.5">
               <Link href={`/tournaments/${tournament.id}/courts`}>
                 <LayoutGrid className="h-4 w-4" />

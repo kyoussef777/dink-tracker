@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { generateSingleElimination, generateRoundRobin, advanceWinner } from "./bracket-engine"
+import { generateSingleElimination, generateRoundRobin, advanceWinner, generateBracket } from "./bracket-engine"
 
 describe("generateSingleElimination", () => {
   it("8 teams: 3 rounds, 7 matches, no byes", () => {
@@ -62,6 +62,21 @@ describe("generateRoundRobin", () => {
 
   it("throws for less than 2 teams", () => {
     expect(() => generateRoundRobin(1)).toThrow()
+  })
+})
+
+describe("generateBracket dispatch", () => {
+  it("dispatches to round robin", () => {
+    const rr = generateBracket("ROUND_ROBIN", 4)
+    expect(rr.matches).toHaveLength(6)
+  })
+  it("defaults to single elimination", () => {
+    const se = generateBracket("SINGLE_ELIMINATION", 4)
+    expect(se.matches).toHaveLength(3)
+  })
+  it("falls back to single elim for unknown formats", () => {
+    const se = generateBracket("DOUBLE_ELIMINATION", 4)
+    expect(se.matches).toHaveLength(3)
   })
 })
 

@@ -9,17 +9,15 @@ import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { BracketTree } from "@/components/bracket/BracketTree"
+import { RoundRobinView } from "@/components/bracket/RoundRobinView"
+import { StandingsTable } from "@/components/bracket/StandingsTable"
+import { ChampionCard } from "@/components/bracket/ChampionCard"
 import { AddTeamsForm } from "@/components/bracket/AddTeamsForm"
 import { BracketActions } from "@/components/bracket/BracketActions"
 import { LiveSubscriber } from "@/components/shared/LiveSubscriber"
+import { computeStandings } from "@/lib/standings"
+import { bracketFormatLabel } from "@/lib/utils"
 import type { BracketStatus } from "@prisma/client"
-
-const formatLabel: Record<string, string> = {
-  SINGLE_ELIMINATION: "Single elimination",
-  DOUBLE_ELIMINATION: "Double elimination",
-  ROUND_ROBIN: "Round robin",
-  POOL_PLAY: "Pool play",
-}
 
 export default async function BracketDetailPage({
   params,
@@ -58,6 +56,7 @@ export default async function BracketDetailPage({
   const myTeamIds = bracket.teams
     .filter((t) => t.players.some((p) => p.userId === current.userId))
     .map((t) => t.id)
+  const champion = computeChampion(bracket)
 
   return (
     <div className="space-y-8">
@@ -84,7 +83,7 @@ export default async function BracketDetailPage({
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{formatLabel[bracket.format] ?? bracket.format}</p>
+          <p className="text-sm text-muted-foreground">{bracketFormatLabel(bracket.format)}</p>
         </div>
         {isAdmin && <BracketActions bracketId={bracket.id} tournamentId={tournamentId} />}
       </div>
@@ -110,6 +109,7 @@ export default async function BracketDetailPage({
         )
       ) : (
         <>
+          {champion && <ChampionCard team={champion} highlightTeamIds={myTeamIds} />}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold tracking-tight">Bracket</h2>
@@ -119,6 +119,14 @@ export default async function BracketDetailPage({
             </div>
             {bracket.matches.length === 0 ? (
               <EmptyState title="No matches generated" description="Try recreating this bracket." />
+            ) : bracket.format === "ROUND_ROBIN" ? (
+              <RoundRobinView
+                matches={bracket.matches}
+                totalRounds={bracket.rounds}
+                courtOptions={courtOptions}
+                readOnly={!isAdmin}
+                highlightTeamIds={myTeamIds}
+              />
             ) : (
               <BracketTree
                 matches={bracket.matches}
@@ -129,6 +137,16 @@ export default async function BracketDetailPage({
               />
             )}
           </section>
+
+          {bracket.format === "ROUND_ROBIN" && (
+            <section className="space-y-4">
+              <h2 className="text-xl font-semibold tracking-tight">Standings</h2>
+              <StandingsTable
+                rows={computeStandings(bracket.teams, bracket.matches)}
+                highlightTeamIds={myTeamIds}
+              />
+            </section>
+          )}
 
           <section className="space-y-4">
             <h2 className="text-xl font-semibold tracking-tight">Teams</h2>
@@ -169,6 +187,17 @@ export default async function BracketDetailPage({
       )}
     </div>
   )
+}
+
+function computeChampion<
+  T extends { id: string },
+  M extends { round: number; winnerId: string | null; status: string }
+>(bracket: { status: string; format: string; rounds: number; teams: T[]; matches: M[] }): T | null {
+  if (bracket.status !== "COMPLETED") return null
+  if (bracket.format === "ROUND_ROBIN") return null
+  const final = bracket.matches.find((m) => m.round === bracket.rounds && m.status === "COMPLETED")
+  if (!final?.winnerId) return null
+  return bracket.teams.find((t) => t.id === final.winnerId) ?? null
 }
 
 export const dynamic = "force-dynamic"

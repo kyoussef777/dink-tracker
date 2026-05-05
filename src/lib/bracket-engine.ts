@@ -13,6 +13,16 @@ export type GeneratedBracket = {
   hasByes: boolean
 }
 
+export function generateBracket(format: string, teamCount: number): GeneratedBracket {
+  switch (format) {
+    case "ROUND_ROBIN":
+      return generateRoundRobin(teamCount)
+    case "SINGLE_ELIMINATION":
+    default:
+      return generateSingleElimination(teamCount)
+  }
+}
+
 export function generateSingleElimination(teamCount: number): GeneratedBracket {
   if (teamCount < 2) throw new Error("Need at least 2 teams")
 

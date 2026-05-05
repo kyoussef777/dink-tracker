@@ -2,7 +2,7 @@ import { db } from "@/lib/db"
 import { parseBody } from "@/lib/api"
 import { requireAdmin } from "@/lib/auth"
 import { z } from "zod"
-import { generateSingleElimination, generateRoundRobin } from "@/lib/bracket-engine"
+import { generateBracket } from "@/lib/bracket-engine"
 
 const AddTeamsSchema = z.object({
   teams: z
@@ -50,10 +50,7 @@ export async function POST(req: Request, { params }: Params) {
     )
   )
 
-  const generated =
-    bracket.format === "ROUND_ROBIN"
-      ? generateRoundRobin(created.length)
-      : generateSingleElimination(created.length)
+  const generated = generateBracket(bracket.format, created.length)
 
   const seedToTeamId = new Map(created.map((t, i) => [i + 1, t.id]))
 

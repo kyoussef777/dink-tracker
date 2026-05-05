@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Trophy, Users } from "lucide-react"
+import { bracketFormatLabel } from "@/lib/utils"
 import type { Bracket, BracketStatus } from "@prisma/client"
 
 interface Props {
@@ -12,13 +13,6 @@ interface Props {
   matchCount: number
   completedMatches: number
   youAreIn?: boolean
-}
-
-const formatLabel: Record<string, string> = {
-  SINGLE_ELIMINATION: "Single elimination",
-  DOUBLE_ELIMINATION: "Double elimination",
-  ROUND_ROBIN: "Round robin",
-  POOL_PLAY: "Pool play",
 }
 
 export function BracketSummaryCard({
@@ -56,7 +50,7 @@ export function BracketSummaryCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-3 pb-5 text-sm">
-          <p className="text-muted-foreground">{formatLabel[bracket.format] ?? bracket.format}</p>
+          <p className="text-muted-foreground">{bracketFormatLabel(bracket.format)}</p>
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <Users className="h-4 w-4" />
