@@ -12,6 +12,8 @@ import { RoundRobinView } from "@/components/bracket/RoundRobinView"
 import { StandingsTable } from "@/components/bracket/StandingsTable"
 import { ChampionCard } from "@/components/bracket/ChampionCard"
 import { LiveSubscriber } from "@/components/shared/LiveSubscriber"
+import { Logo } from "@/components/shared/Logo"
+import { ThemeToggle } from "@/components/shared/ThemeToggle"
 import { computeStandings } from "@/lib/standings"
 import { bracketFormatLabel } from "@/lib/utils"
 import type { BracketStatus } from "@prisma/client"
@@ -39,15 +41,17 @@ export default async function PublicBracketPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container flex h-14 items-center justify-between">
-          <Link href={`/share/${tournamentId}`} className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="inline-block h-6 w-6 rounded-md bg-primary" aria-hidden="true" />
-            <span>Dink Tracker</span>
+      <header className="sticky top-0 z-50 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center justify-between gap-3">
+          <Link href={`/share/${tournamentId}`}>
+            <Logo size={26} />
           </Link>
-          <Badge variant="outline" className="text-[10px] uppercase">
-            Public view
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] uppercase">
+              Public view
+            </Badge>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
       <main className="container py-8">

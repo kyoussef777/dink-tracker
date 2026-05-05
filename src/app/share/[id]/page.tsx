@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LiveSubscriber } from "@/components/shared/LiveSubscriber"
+import { Logo } from "@/components/shared/Logo"
+import { ThemeToggle } from "@/components/shared/ThemeToggle"
 import { formatDateRange, bracketFormatLabel } from "@/lib/utils"
 import type { TournamentStatus, BracketStatus } from "@prisma/client"
 
@@ -35,15 +37,17 @@ export default async function PublicTournamentPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container flex h-14 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="inline-block h-6 w-6 rounded-md bg-primary" aria-hidden="true" />
-            <span>Dink Tracker</span>
+      <header className="sticky top-0 z-50 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center justify-between gap-3">
+          <Link href="/">
+            <Logo size={26} />
           </Link>
-          <Badge variant="outline" className="text-[10px] uppercase">
-            Public view
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] uppercase">
+              Public view
+            </Badge>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
       <main className="container py-8">

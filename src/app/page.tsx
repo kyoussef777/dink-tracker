@@ -3,6 +3,8 @@ import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
 import { ArrowRight, Trophy, Users, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Logo } from "@/components/shared/Logo"
+import { ThemeToggle } from "@/components/shared/ThemeToggle"
 import { getCurrentRole } from "@/lib/auth"
 
 export default async function Home() {
@@ -13,15 +15,23 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container flex h-14 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="inline-block h-6 w-6 rounded-md bg-primary" aria-hidden="true" />
-            <span>Dink Tracker</span>
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[480px] bg-[radial-gradient(60%_50%_at_50%_0%,hsl(var(--primary)/0.18),transparent)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[-120px] top-[120px] -z-10 h-72 w-72 rounded-full bg-accent/20 blur-3xl"
+      />
+      <header className="sticky top-0 z-50 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center justify-between gap-3">
+          <Link href="/">
+            <Logo size={26} />
           </Link>
-          <nav className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
               <Link href="/sign-in">Sign in</Link>
             </Button>
             <Button asChild size="sm">
@@ -76,7 +86,7 @@ export default async function Home() {
 
 function Feature({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
-    <div className="space-y-2 rounded-xl border bg-card p-5">
+    <div className="space-y-2 rounded-xl border bg-card/80 p-5 shadow-sm transition-colors hover:border-primary/40">
       <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
         {icon}
       </div>
