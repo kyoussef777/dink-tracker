@@ -1,0 +1,5 @@
+player1_name,player2_name,phone,email,partner_email,skill_level,team_name
+Jane Doe,John Smith,201-555-0100,jane@example.com,john@example.com,Beginner-Intermediate,
+Sara Lee,Mike Park,201-555-0101,sara@example.com,,Beginner-Intermediate,Lee & Park
+Alex Kim,Jamie Chen,,,,Intermediate-Advanced,
+Morgan Reed,Casey Wright,201-555-0102,morgan@example.com,casey@example.com,Intermediate-Advanced,

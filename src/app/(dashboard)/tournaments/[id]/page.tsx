@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/EmptyState"
 import { Separator } from "@/components/ui/separator"
 import { TournamentActions } from "@/components/tournament/TournamentActions"
 import { ShareButton } from "@/components/tournament/ShareButton"
+import { RegistrationsCsvImport } from "@/components/tournament/RegistrationsCsvImport"
 import { CreateBracketDialog } from "@/components/bracket/CreateBracketDialog"
 import { BracketSummaryCard } from "@/components/bracket/BracketSummaryCard"
 import { BracketSkillFilter } from "@/components/bracket/BracketSkillFilter"
@@ -121,7 +122,12 @@ export default async function TournamentDetailPage({
                 : "Open a bracket to see the full tree and your next match."}
             </p>
           </div>
-          {isAdmin && <CreateBracketDialog tournamentId={tournament.id} />}
+          {isAdmin && (
+            <div className="flex flex-wrap items-center gap-2">
+              <RegistrationsCsvImport tournamentId={tournament.id} />
+              <CreateBracketDialog tournamentId={tournament.id} />
+            </div>
+          )}
         </div>
 
         {skills.length > 1 && (
