@@ -1,13 +1,14 @@
 "use client"
 import { useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { pusherClient } from "@/lib/pusher-client"
+import { getPusherClient } from "@/lib/pusher-client"
 
 export function useLive(tournamentId: string) {
   const qc = useQueryClient()
 
   useEffect(() => {
-    const channel = pusherClient.subscribe(`tournament-${tournamentId}`)
+    const client = getPusherClient()
+    const channel = client.subscribe(`tournament-${tournamentId}`)
 
     channel.bind("match-updated", (data: { bracketId: string }) => {
       qc.invalidateQueries({ queryKey: ["bracket", data.bracketId] })
@@ -24,7 +25,7 @@ export function useLive(tournamentId: string) {
 
     return () => {
       channel.unbind_all()
-      pusherClient.unsubscribe(`tournament-${tournamentId}`)
+      client.unsubscribe(`tournament-${tournamentId}`)
     }
   }, [tournamentId, qc])
 }

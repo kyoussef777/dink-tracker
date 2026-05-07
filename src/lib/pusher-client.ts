@@ -1,5 +1,15 @@
 import PusherJs from "pusher-js"
 
-export const pusherClient = new PusherJs(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-})
+let instance: PusherJs | null = null
+
+export function getPusherClient(): PusherJs {
+  if (typeof window === "undefined") {
+    throw new Error("pusherClient is browser-only")
+  }
+  if (!instance) {
+    instance = new PusherJs(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    })
+  }
+  return instance
+}

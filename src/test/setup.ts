@@ -8,9 +8,9 @@ vi.mock("@/lib/pusher", () => ({
 
 // Mock Pusher client in tests
 vi.mock("@/lib/pusher-client", () => ({
-  pusherClient: {
-    subscribe: vi.fn(() => ({ bind: vi.fn(), unbind_all: vi.fn() })),
+  getPusherClient: vi.fn(() => ({
+    subscribe: vi.fn(() => ({ bind: vi.fn(), unbind: vi.fn(), unbind_all: vi.fn() })),
     unsubscribe: vi.fn(),
     connection: { bind: vi.fn(), unbind_all: vi.fn() },
-  },
+  })),
 }))

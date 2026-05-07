@@ -12,6 +12,7 @@
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- tsx prisma/seed.ts",
     "db:seed:stmarks": "dotenv -e .env.local -- tsx scripts/seed-stmarks.ts",
+    "db:seed:stmarks-demo": "dotenv -e .env.local -- tsx scripts/seed-stmarks-demo.ts",
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
