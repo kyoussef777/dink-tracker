@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { generateSingleElimination, generateRoundRobin, advanceWinner, generateBracket } from "./bracket-engine"
+import {
+  generateSingleElimination,
+  generateRoundRobin,
+  generateDoubleElimination,
+  advanceWinner,
+  generateBracket,
+} from "./bracket-engine"
 
 describe("generateSingleElimination", () => {
   it("8 teams: 3 rounds, 7 matches, no byes", () => {
@@ -74,9 +80,81 @@ describe("generateBracket dispatch", () => {
     const se = generateBracket("SINGLE_ELIMINATION", 4)
     expect(se.matches).toHaveLength(3)
   })
+  it("dispatches to double elimination", () => {
+    const de = generateBracket("DOUBLE_ELIMINATION", 4)
+    expect(de.matches).toHaveLength(6)
+  })
   it("falls back to single elim for unknown formats", () => {
-    const se = generateBracket("DOUBLE_ELIMINATION", 4)
+    const se = generateBracket("UNKNOWN_FORMAT", 4)
     expect(se.matches).toHaveLength(3)
+  })
+})
+
+describe("generateDoubleElimination", () => {
+  it("4 teams: 6 matches (3 WB + 2 LB + 1 GF)", () => {
+    const { matches } = generateDoubleElimination(4)
+    const wb = matches.filter((m) => m.bracketSide === "WINNERS")
+    const lb = matches.filter((m) => m.bracketSide === "LOSERS")
+    const gf = matches.filter((m) => m.bracketSide === "GRAND_FINAL")
+    expect(wb).toHaveLength(3)
+    expect(lb).toHaveLength(2)
+    expect(gf).toHaveLength(1)
+  })
+
+  it("8 teams: 14 matches (7 WB + 6 LB + 1 GF), guarantees 2K-2 total", () => {
+    const { matches } = generateDoubleElimination(8)
+    expect(matches).toHaveLength(14)
+    expect(matches.filter((m) => m.bracketSide === "WINNERS")).toHaveLength(7)
+    expect(matches.filter((m) => m.bracketSide === "LOSERS")).toHaveLength(6)
+    expect(matches.filter((m) => m.bracketSide === "GRAND_FINAL")).toHaveLength(1)
+  })
+
+  it("16 teams: 30 matches", () => {
+    const { matches } = generateDoubleElimination(16)
+    expect(matches).toHaveLength(30)
+  })
+
+  it("LR1 matches both pull losers from WR1", () => {
+    const { matches } = generateDoubleElimination(8)
+    const lr1 = matches
+      .filter((m) => m.bracketSide === "LOSERS")
+      .sort((a, b) => a.position - b.position)
+      .slice(0, 2)
+    for (const m of lr1) {
+      expect(m.fromMatch1IsLoser).toBe(true)
+      expect(m.fromMatch2IsLoser).toBe(true)
+    }
+  })
+
+  it("Grand final pulls WB final winner and LB final winner", () => {
+    const { matches } = generateDoubleElimination(8)
+    const gf = matches.find((m) => m.bracketSide === "GRAND_FINAL")!
+    expect(gf.fromMatch1IsLoser).toBeFalsy()
+    expect(gf.fromMatch2IsLoser).toBeFalsy()
+  })
+
+  it("rejects non-power-of-2 team counts", () => {
+    expect(() => generateDoubleElimination(6)).toThrow(/power of 2/)
+    expect(() => generateDoubleElimination(10)).toThrow(/power of 2/)
+  })
+
+  it("rejects fewer than 4 teams", () => {
+    expect(() => generateDoubleElimination(2)).toThrow(/at least 4/)
+  })
+})
+
+describe("advanceWinner with loser routing", () => {
+  it("does not propagate winner to LB slots that pull losers", () => {
+    const { matches } = generateDoubleElimination(4)
+    // WR1 match position 1 — loser should fill an LB slot, not winner.
+    const updated = advanceWinner(1, 1, matches)
+    const lbSlot = updated.find(
+      (m) => m.bracketSide === "LOSERS" && (m.fromMatch1Pos === 1 || m.fromMatch2Pos === 1)
+    )
+    expect(lbSlot).toBeDefined()
+    // Neither slot should have been populated with the winner seed.
+    expect(lbSlot?.team1Seed).toBeNull()
+    expect(lbSlot?.team2Seed).toBeNull()
   })
 })
 

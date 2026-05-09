@@ -51,7 +51,9 @@ export async function PATCH(req: Request, { params }: Params) {
 
   let advanced = false
   if (winnerId) {
-    advanced = await advanceWinnerInDb(match.bracket.id, match.position, winnerId)
+    const loserId =
+      winnerId === match.team1Id ? match.team2Id : winnerId === match.team2Id ? match.team1Id : null
+    advanced = await advanceWinnerInDb(match.bracket.id, match.position, winnerId, loserId)
     await maybeCompleteBracket(match.bracket.id)
   }
 
@@ -99,7 +101,8 @@ function computeWinner(
 async function advanceWinnerInDb(
   bracketId: string,
   completedPos: number,
-  winnerId: string
+  winnerId: string,
+  loserId: string | null
 ): Promise<boolean> {
   const dependents = await db.match.findMany({
     where: {
@@ -109,17 +112,21 @@ async function advanceWinnerInDb(
   })
   if (dependents.length === 0) return false
 
-  await db.$transaction(
-    dependents.map((dep) =>
+  const updates: Prisma.PrismaPromise<unknown>[] = []
+  for (const dep of dependents) {
+    const slot1 = dep.fromMatch1Pos === completedPos
+    const useLoser = slot1 ? dep.fromMatch1IsLoser : dep.fromMatch2IsLoser
+    const teamId = useLoser ? loserId : winnerId
+    if (!teamId) continue
+    updates.push(
       db.match.update({
         where: { id: dep.id },
-        data:
-          dep.fromMatch1Pos === completedPos
-            ? { team1Id: winnerId }
-            : { team2Id: winnerId },
+        data: slot1 ? { team1Id: teamId } : { team2Id: teamId },
       })
     )
-  )
+  }
+  if (updates.length === 0) return false
+  await db.$transaction(updates)
   return true
 }
 

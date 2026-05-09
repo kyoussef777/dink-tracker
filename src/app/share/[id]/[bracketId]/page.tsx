@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { BracketTree } from "@/components/bracket/BracketTree"
+import { DoubleEliminationView } from "@/components/bracket/DoubleEliminationView"
 import { RoundRobinView } from "@/components/bracket/RoundRobinView"
 import { StandingsTable } from "@/components/bracket/StandingsTable"
 import { ChampionCard } from "@/components/bracket/ChampionCard"
@@ -105,6 +106,12 @@ export default async function PublicBracketPage({
                   <RoundRobinView
                     matches={bracket.matches}
                     totalRounds={bracket.rounds}
+                    courtOptions={bracket.tournament.courtNames}
+                    readOnly
+                  />
+                ) : bracket.format === "DOUBLE_ELIMINATION" ? (
+                  <DoubleEliminationView
+                    matches={bracket.matches}
                     courtOptions={bracket.tournament.courtNames}
                     readOnly
                   />

@@ -10,9 +10,10 @@ interface Props {
   courtOptions: string[]
   readOnly?: boolean
   highlightTeamIds?: string[]
+  roundLabel?: (round: number, totalRounds: number) => string
 }
 
-export function BracketTree({ matches, totalRounds, courtOptions, readOnly, highlightTeamIds }: Props) {
+export function BracketTree({ matches, totalRounds, courtOptions, readOnly, highlightTeamIds, roundLabel: roundLabelFn }: Props) {
   const matchesByRound = new Map<number, MatchWithTeams[]>()
   for (const m of matches) {
     const arr = matchesByRound.get(m.round) ?? []
@@ -28,7 +29,7 @@ export function BracketTree({ matches, totalRounds, courtOptions, readOnly, high
           return (
             <div key={round} className="flex w-60 shrink-0 flex-col sm:w-64">
               <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {roundLabel(round, totalRounds)}
+                {(roundLabelFn ?? roundLabel)(round, totalRounds)}
               </h4>
               <div
                 className="flex flex-1 flex-col"

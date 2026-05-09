@@ -21,7 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 
 const FormSchema = z.object({
   skillLevel: z.string().min(1, "Skill level is required").max(20),
-  format: z.enum(["SINGLE_ELIMINATION", "ROUND_ROBIN"]),
+  format: z.enum(["SINGLE_ELIMINATION", "DOUBLE_ELIMINATION", "ROUND_ROBIN"]),
 })
 
 type FormValues = z.infer<typeof FormSchema>
@@ -101,9 +101,13 @@ export function CreateBracketDialog({ tournamentId }: { tournamentId: string }) 
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="SINGLE_ELIMINATION">Single elimination</SelectItem>
+                      <SelectItem value="DOUBLE_ELIMINATION">Double elimination</SelectItem>
                       <SelectItem value="ROUND_ROBIN">Round robin</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Double elimination guarantees every team plays at least 2 matches — losers drop into a side bracket. Requires a power-of-2 team count (4, 8, 16, or 32).
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

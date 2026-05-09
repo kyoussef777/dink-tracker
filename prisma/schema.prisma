@@ -65,25 +65,28 @@ model Player {
 }
 
 model Match {
-  id               String      @id @default(cuid())
-  bracketId        String
-  bracket          Bracket     @relation(fields: [bracketId], references: [id], onDelete: Cascade)
-  round            Int
-  position         Int
-  team1Id          String?
-  team1            Team?       @relation("Team1", fields: [team1Id], references: [id])
-  team2Id          String?
-  team2            Team?       @relation("Team2", fields: [team2Id], references: [id])
-  winnerId         String?
-  winner           Team?       @relation("Winner", fields: [winnerId], references: [id])
-  score1           Int[]
-  score2           Int[]
-  court            String?
-  status           MatchStatus @default(PENDING)
-  fromMatch1Pos    Int?
-  fromMatch2Pos    Int?
-  scheduledAt      DateTime?
-  completedAt      DateTime?
+  id                 String      @id @default(cuid())
+  bracketId          String
+  bracket            Bracket     @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  round              Int
+  position           Int
+  team1Id            String?
+  team1              Team?       @relation("Team1", fields: [team1Id], references: [id])
+  team2Id            String?
+  team2              Team?       @relation("Team2", fields: [team2Id], references: [id])
+  winnerId           String?
+  winner             Team?       @relation("Winner", fields: [winnerId], references: [id])
+  score1             Int[]
+  score2             Int[]
+  court              String?
+  status             MatchStatus @default(PENDING)
+  bracketSide        BracketSide @default(WINNERS)
+  fromMatch1Pos      Int?
+  fromMatch2Pos      Int?
+  fromMatch1IsLoser  Boolean     @default(false)
+  fromMatch2IsLoser  Boolean     @default(false)
+  scheduledAt        DateTime?
+  completedAt        DateTime?
 
   @@unique([bracketId, position])
 }
@@ -124,4 +127,10 @@ enum MatchStatus {
   IN_PROGRESS
   COMPLETED
   BYE
+}
+
+enum BracketSide {
+  WINNERS
+  LOSERS
+  GRAND_FINAL
 }

@@ -45,6 +45,16 @@ export async function POST(req: Request, { params }: Params) {
   const data = await parseBody(req, AddTeamsSchema)
   if (data instanceof Response) return data
 
+  if (bracket.format === "DOUBLE_ELIMINATION") {
+    const n = data.teams.length
+    if (n < 4 || (n & (n - 1)) !== 0 || n > 32) {
+      return Response.json(
+        { error: "Double elimination needs a power-of-2 team count (4, 8, 16, or 32)." },
+        { status: 400 }
+      )
+    }
+  }
+
   const created = await db.$transaction(
     data.teams.map((t, idx) =>
       db.team.create({
@@ -70,9 +80,14 @@ export async function POST(req: Request, { params }: Params) {
       team1Id: m.team1Seed ? seedToTeamId.get(m.team1Seed) ?? null : null,
       team2Id: m.team2Seed ? seedToTeamId.get(m.team2Seed) ?? null : null,
       status:
-        m.round === 1 && (m.team1Seed === null || m.team2Seed === null) ? "BYE" : "PENDING",
+        m.round === 1 && m.bracketSide !== "LOSERS" && (m.team1Seed === null || m.team2Seed === null)
+          ? "BYE"
+          : "PENDING",
+      bracketSide: m.bracketSide ?? "WINNERS",
       fromMatch1Pos: m.fromMatch1Pos ?? null,
       fromMatch2Pos: m.fromMatch2Pos ?? null,
+      fromMatch1IsLoser: m.fromMatch1IsLoser ?? false,
+      fromMatch2IsLoser: m.fromMatch2IsLoser ?? false,
     })),
   })
 
