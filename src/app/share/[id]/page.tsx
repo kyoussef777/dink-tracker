@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { Calendar, MapPin, Trophy, Users } from "lucide-react"
+import { Calendar, MapPin, Trophy, Users, Tv } from "lucide-react"
 import { db } from "@/lib/db"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
@@ -76,6 +77,14 @@ export default async function PublicTournamentPage({
                 {tournament.description}
               </p>
             )}
+            <div>
+              <Button asChild variant="outline" size="sm" className="gap-1.5">
+                <Link href={`/share/${tournament.id}/courts`}>
+                  <Tv className="h-4 w-4" />
+                  Court status
+                </Link>
+              </Button>
+            </div>
           </div>
 
           <Separator />

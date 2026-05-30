@@ -234,6 +234,86 @@ export function advanceWinner(
   })
 }
 
+/**
+ * Auto-resolves first-round byes. A winners-side round-1 match with exactly one
+ * team is a bye: the present team wins automatically and advances into the next
+ * round. Returns a copy of `matches` with bye winners propagated into their
+ * dependent matches, plus a map of bye match position -> winning seed.
+ */
+export function resolveByes(matches: BracketMatch[]): {
+  matches: BracketMatch[]
+  byeWinners: Map<number, number>
+} {
+  const resolved = matches.map((m) => ({ ...m }))
+  const byeWinners = new Map<number, number>()
+
+  for (const m of resolved) {
+    const isWinnersSide = m.bracketSide === undefined || m.bracketSide === "WINNERS"
+    if (m.round !== 1 || !isWinnersSide) continue
+
+    const present =
+      m.team1Seed !== null && m.team2Seed === null
+        ? m.team1Seed
+        : m.team2Seed !== null && m.team1Seed === null
+          ? m.team2Seed
+          : null
+    if (present === null) continue
+
+    byeWinners.set(m.position, present)
+    for (const dep of resolved) {
+      if (dep.fromMatch1Pos === m.position && !dep.fromMatch1IsLoser) dep.team1Seed = present
+      if (dep.fromMatch2Pos === m.position && !dep.fromMatch2IsLoser) dep.team2Seed = present
+    }
+  }
+
+  return { matches: resolved, byeWinners }
+}
+
+export type MatchCreateRow = {
+  bracketId: string
+  round: number
+  position: number
+  team1Id: string | null
+  team2Id: string | null
+  winnerId: string | null
+  status: "PENDING" | "BYE"
+  bracketSide: BracketSide
+  fromMatch1Pos: number | null
+  fromMatch2Pos: number | null
+  fromMatch1IsLoser: boolean
+  fromMatch2IsLoser: boolean
+}
+
+/**
+ * Maps a generated bracket onto persistable match rows: resolves byes, links
+ * seeds to team ids, and pre-advances bye winners. Shared by every code path
+ * that materializes a bracket (manual team entry, CSV import).
+ */
+export function buildMatchRows(
+  generated: GeneratedBracket,
+  bracketId: string,
+  seedToTeamId: Map<number, string>
+): MatchCreateRow[] {
+  const { matches, byeWinners } = resolveByes(generated.matches)
+  return matches.map((m) => {
+    const byeWinnerSeed = byeWinners.get(m.position)
+    return {
+      bracketId,
+      round: m.round,
+      position: m.position,
+      team1Id: m.team1Seed ? seedToTeamId.get(m.team1Seed) ?? null : null,
+      team2Id: m.team2Seed ? seedToTeamId.get(m.team2Seed) ?? null : null,
+      winnerId: byeWinnerSeed ? seedToTeamId.get(byeWinnerSeed) ?? null : null,
+      status: byeWinnerSeed ? "BYE" : "PENDING",
+      bracketSide: m.bracketSide ?? "WINNERS",
+      fromMatch1Pos: m.fromMatch1Pos ?? null,
+      fromMatch2Pos: m.fromMatch2Pos ?? null,
+      fromMatch1IsLoser: m.fromMatch1IsLoser ?? false,
+      fromMatch2IsLoser: m.fromMatch2IsLoser ?? false,
+    }
+  })
+}
+
 function nextPowerOf2(n: number): number {
   return Math.pow(2, Math.ceil(Math.log2(n)))
 }

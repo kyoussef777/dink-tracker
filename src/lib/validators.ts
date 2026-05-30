@@ -16,7 +16,7 @@ export const TournamentUpdateSchema = TournamentCreateSchema.partial().extend({
 export const BracketCreateSchema = z.object({
   tournamentId: z.string().cuid(),
   skillLevel: z.string().min(1, "Skill level is required").max(20),
-  format: z.enum(["SINGLE_ELIMINATION", "DOUBLE_ELIMINATION", "ROUND_ROBIN", "POOL_PLAY"]),
+  format: z.enum(["SINGLE_ELIMINATION", "DOUBLE_ELIMINATION", "ROUND_ROBIN"]),
 })
 
 export const TeamCreateSchema = z.object({

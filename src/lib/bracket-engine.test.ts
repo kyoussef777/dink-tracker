@@ -5,6 +5,7 @@ import {
   generateDoubleElimination,
   advanceWinner,
   generateBracket,
+  resolveByes,
 } from "./bracket-engine"
 
 describe("generateSingleElimination", () => {
@@ -155,6 +156,44 @@ describe("advanceWinner with loser routing", () => {
     // Neither slot should have been populated with the winner seed.
     expect(lbSlot?.team1Seed).toBeNull()
     expect(lbSlot?.team2Seed).toBeNull()
+  })
+})
+
+describe("resolveByes", () => {
+  it("auto-advances bye teams into the next round (5 teams)", () => {
+    const { matches } = generateSingleElimination(5)
+    const { matches: resolved, byeWinners } = resolveByes(matches)
+
+    // 5 teams in a size-8 bracket -> 3 first-round byes (seeds 1, 2, 3).
+    expect(byeWinners.size).toBe(3)
+
+    // Every bye winner must appear in a round-2 slot.
+    for (const [pos, seed] of byeWinners) {
+      const dependent = resolved.find(
+        (m) => m.fromMatch1Pos === pos || m.fromMatch2Pos === pos
+      )
+      expect(dependent).toBeDefined()
+      expect([dependent!.team1Seed, dependent!.team2Seed]).toContain(seed)
+    }
+  })
+
+  it("produces no bye winners for a full power-of-2 bracket", () => {
+    const { matches } = generateSingleElimination(8)
+    const { byeWinners } = resolveByes(matches)
+    expect(byeWinners.size).toBe(0)
+  })
+
+  it("does not mutate the input matches", () => {
+    const { matches } = generateSingleElimination(5)
+    const before = JSON.stringify(matches)
+    resolveByes(matches)
+    expect(JSON.stringify(matches)).toBe(before)
+  })
+
+  it("ignores losers-bracket matches in double elimination", () => {
+    const { matches } = generateDoubleElimination(4)
+    const { byeWinners } = resolveByes(matches)
+    expect(byeWinners.size).toBe(0)
   })
 })
 
