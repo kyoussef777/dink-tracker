@@ -2,7 +2,7 @@ import { db } from "@/lib/db"
 import { parseBody } from "@/lib/api"
 import { requireAdmin } from "@/lib/auth"
 import { z } from "zod"
-import { generateBracket } from "@/lib/bracket-engine"
+import { generateBracket, buildMatchRows } from "@/lib/bracket-engine"
 import { autoLinkPlayersByEmail } from "@/lib/player-link"
 import { clerkClient } from "@clerk/nextjs/server"
 
@@ -69,27 +69,9 @@ export async function POST(req: Request, { params }: Params) {
   )
 
   const generated = generateBracket(bracket.format, created.length)
-
   const seedToTeamId = new Map(created.map((t, i) => [i + 1, t.id]))
 
-  await db.match.createMany({
-    data: generated.matches.map((m) => ({
-      bracketId: id,
-      round: m.round,
-      position: m.position,
-      team1Id: m.team1Seed ? seedToTeamId.get(m.team1Seed) ?? null : null,
-      team2Id: m.team2Seed ? seedToTeamId.get(m.team2Seed) ?? null : null,
-      status:
-        m.round === 1 && m.bracketSide !== "LOSERS" && (m.team1Seed === null || m.team2Seed === null)
-          ? "BYE"
-          : "PENDING",
-      bracketSide: m.bracketSide ?? "WINNERS",
-      fromMatch1Pos: m.fromMatch1Pos ?? null,
-      fromMatch2Pos: m.fromMatch2Pos ?? null,
-      fromMatch1IsLoser: m.fromMatch1IsLoser ?? false,
-      fromMatch2IsLoser: m.fromMatch2IsLoser ?? false,
-    })),
-  })
+  await db.match.createMany({ data: buildMatchRows(generated, id, seedToTeamId) })
 
   await db.bracket.update({
     where: { id },

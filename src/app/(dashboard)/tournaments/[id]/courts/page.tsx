@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { getCurrentRole } from "@/lib/auth"
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft, Tv } from "lucide-react"
 import { db } from "@/lib/db"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { LiveIndicator } from "@/components/shared/LiveIndicator"
@@ -69,7 +70,15 @@ export default async function CourtsPage({ params }: { params: Promise<{ id: str
             {configured.length} configured · {liveCount} live now
           </p>
         </div>
-        {liveCount > 0 && <LiveIndicator label={`${liveCount} live`} />}
+        <div className="flex items-center gap-3">
+          {liveCount > 0 && <LiveIndicator label={`${liveCount} live`} />}
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href={`/share/${id}/courts`} target="_blank" rel="noopener noreferrer">
+              <Tv className="h-4 w-4" />
+              Big screen
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Separator />
