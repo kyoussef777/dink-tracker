@@ -11,7 +11,8 @@
       "Bash(curl *)",
       "Bash(npm install *)",
       "Bash(tasklist)",
-      "PowerShell(Get-Process *)"
+      "PowerShell(Get-Process *)",
+      "mcp__62b543ed-4621-408b-a484-b5cb857993ba__get_runtime_logs"
     ]
   }
 }
