@@ -21,6 +21,12 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 }
 
+// The app is fully auth-gated and DB-backed, so nothing is meaningfully static.
+// Forcing dynamic rendering also stops `next build` from statically prerendering
+// the Clerk-wrapped /_not-found page, which throws "Missing publishableKey" when
+// the key isn't inlined at build time.
+export const dynamic = "force-dynamic"
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
