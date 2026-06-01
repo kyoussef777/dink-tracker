@@ -3,6 +3,7 @@ import { parseBody } from "@/lib/api"
 import { requireAdmin } from "@/lib/auth"
 import { MatchUpdateSchema } from "@/lib/validators"
 import { pusherServer } from "@/lib/pusher"
+import { sendBulkSms, isSmsConfigured } from "@/lib/sms"
 import type { Prisma } from "@prisma/client"
 
 type Params = { params: Promise<{ id: string }> }
@@ -71,7 +72,28 @@ export async function PATCH(req: Request, { params }: Params) {
       .catch(() => {})
   }
 
+  // Alert players when their match is newly assigned to a court (court changed
+  // to a non-empty value). Best-effort: never blocks or fails the response.
+  const courtNewlyAssigned = courtPatch && courtPatch !== match.court
+  if (courtNewlyAssigned && isSmsConfigured()) {
+    const teamIds = [match.team1Id, match.team2Id].filter((t): t is string => t !== null)
+    await notifyCourtAssignment(teamIds, courtPatch).catch(() => {})
+  }
+
   return Response.json({ data: updated })
+}
+
+async function notifyCourtAssignment(teamIds: string[], court: string) {
+  if (teamIds.length === 0) return
+  const players = await db.player.findMany({
+    where: { teamId: { in: teamIds }, phone: { not: null } },
+    select: { phone: true },
+  })
+  if (players.length === 0) return
+  await sendBulkSms(
+    players.map((p) => p.phone),
+    `You're up on ${court}. Please head to your court.`
+  )
 }
 
 function computeWinner(
