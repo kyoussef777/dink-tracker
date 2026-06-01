@@ -42,8 +42,13 @@ export const PlayerSearchSchema = z.object({
   tournamentId: z.string().cuid().optional(),
 })
 
+export const NotifyPlayersSchema = z.object({
+  message: z.string().min(1, "Message is required").max(1000),
+})
+
 export type TournamentCreate = z.infer<typeof TournamentCreateSchema>
 export type TournamentUpdate = z.infer<typeof TournamentUpdateSchema>
 export type BracketCreate = z.infer<typeof BracketCreateSchema>
 export type TeamCreate = z.infer<typeof TeamCreateSchema>
 export type MatchUpdate = z.infer<typeof MatchUpdateSchema>
+export type NotifyPlayers = z.infer<typeof NotifyPlayersSchema>
