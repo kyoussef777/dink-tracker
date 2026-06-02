@@ -193,29 +193,46 @@ async function advanceWinnerInDb(
 
 /**
  * Reverse of advanceWinnerInDb: when a completed match is reopened, null out the
- * slots in dependent matches that were fed from this position so the bracket
- * doesn't keep a now-invalid team downstream. Also reopens a COMPLETED bracket.
+ * slots in dependent matches fed from this position so the bracket doesn't keep
+ * a now-invalid team downstream. Recurses through the chain — a dependent that
+ * had itself advanced a winner is reset and its own downstream cleared too.
+ * Also reopens a COMPLETED bracket/tournament.
  */
 async function retractAdvancementInDb(bracketId: string, completedPos: number) {
-  const dependents = await db.match.findMany({
-    where: {
-      bracketId,
-      OR: [{ fromMatch1Pos: completedPos }, { fromMatch2Pos: completedPos }],
-    },
-    select: { id: true, fromMatch1Pos: true, status: true },
+  const all = await db.match.findMany({
+    where: { bracketId },
+    select: { id: true, position: true, fromMatch1Pos: true, fromMatch2Pos: true, winnerId: true },
   })
 
   const updates: Prisma.PrismaPromise<unknown>[] = []
-  for (const dep of dependents) {
-    const slot1 = dep.fromMatch1Pos === completedPos
-    updates.push(
-      db.match.update({
-        where: { id: dep.id },
-        data: slot1
-          ? { team1Id: null, score1: [], score2: [], winnerId: null, status: "PENDING", completedAt: null }
-          : { team2Id: null, score1: [], score2: [], winnerId: null, status: "PENDING", completedAt: null },
-      })
-    )
+  const queue = [completedPos]
+  const visited = new Set<number>()
+
+  while (queue.length > 0) {
+    const pos = queue.shift()!
+    if (visited.has(pos)) continue
+    visited.add(pos)
+
+    for (const dep of all) {
+      const slot1 = dep.fromMatch1Pos === pos
+      const slot2 = dep.fromMatch2Pos === pos
+      if (!slot1 && !slot2) continue
+      updates.push(
+        db.match.update({
+          where: { id: dep.id },
+          data: {
+            ...(slot1 ? { team1Id: null } : { team2Id: null }),
+            score1: [],
+            score2: [],
+            winnerId: null,
+            status: "PENDING",
+            completedAt: null,
+          },
+        })
+      )
+      // If this dependent had advanced its own winner, retract that too.
+      if (dep.winnerId) queue.push(dep.position)
+    }
   }
   if (updates.length > 0) await db.$transaction(updates)
 

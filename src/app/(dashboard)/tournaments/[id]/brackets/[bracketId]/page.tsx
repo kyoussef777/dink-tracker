@@ -79,7 +79,7 @@ export default async function BracketDetailPage({
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Skill level</p>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{bracket.skillLevel}</h1>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{bracket.skillLevel}</h1>
             <StatusBadge kind="bracket" status={bracket.status as BracketStatus} />
             {!isAdmin && myTeamIds.length > 0 && (
               <Badge variant="outline" className="border-primary/40 text-primary">

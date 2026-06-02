@@ -17,9 +17,16 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const team = await db.team.findFirst({
     where: { id: teamId, bracketId, bracket: { tournament: { createdBy: userId } } },
-    include: { bracket: { select: { tournamentId: true } } },
+    include: { bracket: { select: { tournamentId: true } }, players: { select: { email: true, userId: true } } },
   })
   if (!team) return Response.json({ error: "Not found" }, { status: 404 })
+
+  // Preserve existing Clerk account links across the player rewrite: map each
+  // signed-in player's email to their userId so re-created rows keep the link.
+  const emailToUserId = new Map<string, string>()
+  for (const p of team.players) {
+    if (p.email && p.userId) emailToUserId.set(p.email.toLowerCase(), p.userId)
+  }
 
   const updated = await db.$transaction(async (tx) => {
     if (data.players) {
@@ -31,6 +38,7 @@ export async function PATCH(req: Request, { params }: Params) {
           rating: p.rating ?? null,
           email: p.email ? p.email : null,
           phone: p.phone ? p.phone : null,
+          userId: p.email ? emailToUserId.get(p.email.toLowerCase()) ?? null : null,
         })),
       })
     }

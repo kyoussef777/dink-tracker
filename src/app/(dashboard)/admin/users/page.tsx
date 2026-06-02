@@ -16,7 +16,7 @@ export default async function AdminUsersPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Users</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Manage who can administer tournaments. Promote players to admin or demote admins to player.
         </p>

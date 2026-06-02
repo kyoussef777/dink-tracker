@@ -12,8 +12,8 @@ export function StandingsTable({ rows, highlightTeamIds }: Props) {
   const podium = new Set([1, 2, 3])
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-lg border bg-card">
+      <table className="w-full min-w-[20rem] text-sm">
         <thead>
           <tr className="border-b bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
             <th className="px-3 py-2 text-left font-medium">#</th>
@@ -57,7 +57,7 @@ export function StandingsTable({ rows, highlightTeamIds }: Props) {
                     r.rank
                   )}
                 </td>
-                <td className="px-3 py-2.5 font-medium">
+                <td className="max-w-[10rem] truncate px-3 py-2.5 font-medium">
                   {r.team.name}
                   {mine && (
                     <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary/70">
