@@ -18,7 +18,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const match = await db.match.findFirst({
     where: { id, bracket: { tournament: { createdBy: userId } } },
-    include: { bracket: { select: { id: true, tournamentId: true } } },
+    include: { bracket: { select: { id: true, tournamentId: true, maxActiveMatches: true } } },
   })
   if (!match) return Response.json({ error: "Not found" }, { status: 404 })
 
@@ -66,6 +66,23 @@ export async function PATCH(req: Request, { params }: Params) {
     else if (teamsChanged) nextStatus = "PENDING"
   }
 
+  // Wave/release cap: if the bracket limits concurrent live matches, block a
+  // match that's newly going IN_PROGRESS once the cap is reached. Completing or
+  // editing already-live matches is never blocked.
+  const cap = match.bracket.maxActiveMatches
+  const goingLive = nextStatus === "IN_PROGRESS" && match.status !== "IN_PROGRESS"
+  if (cap > 0 && goingLive) {
+    const liveCount = await db.match.count({
+      where: { bracketId: match.bracket.id, status: "IN_PROGRESS" },
+    })
+    if (liveCount >= cap) {
+      return Response.json(
+        { error: `This bracket is capped at ${cap} live ${cap === 1 ? "match" : "matches"} at a time. Finish a live match first.` },
+        { status: 409 }
+      )
+    }
+  }
+
   const courtPatch =
     data.court === undefined ? match.court : data.court === "" || data.court === null ? null : data.court
 
@@ -78,6 +95,7 @@ export async function PATCH(req: Request, { params }: Params) {
     status: nextStatus ?? match.status,
     winner: winnerId ? { connect: { id: winnerId } } : { disconnect: true },
     completedAt: nextStatus === "COMPLETED" ? new Date() : null,
+    ...(data.round !== undefined ? { round: data.round } : {}),
   }
 
   const updated = await db.match.update({

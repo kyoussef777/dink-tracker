@@ -38,6 +38,14 @@ export const MatchUpdateSchema = z.object({
   winnerId: z.string().cuid().nullable().optional(),
   team1Id: z.string().cuid().nullable().optional(),
   team2Id: z.string().cuid().nullable().optional(),
+  // Admin round editing: move a match to a different round.
+  round: z.number().int().min(1).max(64).optional(),
+})
+
+export const BracketUpdateSchema = z.object({
+  skillLevel: z.string().min(1).max(20).optional(),
+  // Wave cap: how many matches may be live at once. 0 = unlimited.
+  maxActiveMatches: z.number().int().min(0).max(64).optional(),
 })
 
 export const TeamUpdateSchema = z.object({
@@ -72,4 +80,5 @@ export type BracketCreate = z.infer<typeof BracketCreateSchema>
 export type TeamCreate = z.infer<typeof TeamCreateSchema>
 export type TeamUpdate = z.infer<typeof TeamUpdateSchema>
 export type MatchUpdate = z.infer<typeof MatchUpdateSchema>
+export type BracketUpdate = z.infer<typeof BracketUpdateSchema>
 export type NotifyPlayers = z.infer<typeof NotifyPlayersSchema>

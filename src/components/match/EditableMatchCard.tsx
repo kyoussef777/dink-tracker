@@ -11,9 +11,10 @@ interface Props {
   courtOptions: string[]
   highlightTeamIds?: string[]
   teamOptions?: TeamOption[]
+  totalRounds?: number
 }
 
-export function EditableMatchCard({ match, courtOptions, highlightTeamIds, teamOptions }: Props) {
+export function EditableMatchCard({ match, courtOptions, highlightTeamIds, teamOptions, totalRounds }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -31,6 +32,7 @@ export function EditableMatchCard({ match, courtOptions, highlightTeamIds, teamO
         onOpenChange={setOpen}
         courtOptions={courtOptions}
         teamOptions={teamOptions}
+        totalRounds={totalRounds}
         match={{
           id: match.id,
           status: match.status,
@@ -39,6 +41,7 @@ export function EditableMatchCard({ match, courtOptions, highlightTeamIds, teamO
           score2: match.score2,
           team1: match.team1 ? { id: match.team1.id, name: match.team1.name } : null,
           team2: match.team2 ? { id: match.team2.id, name: match.team2.name } : null,
+          round: match.round,
         }}
       />
     </>

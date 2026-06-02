@@ -6,6 +6,7 @@ import {
   advanceWinner,
   generateBracket,
   resolveByes,
+  type BracketMatch,
 } from "./bracket-engine"
 
 describe("generateSingleElimination", () => {
@@ -16,11 +17,47 @@ describe("generateSingleElimination", () => {
     expect(hasByes).toBe(false)
   })
 
-  it("5 teams: 3 rounds, 7 matches, has byes", () => {
+  it("5 teams: play-in (1 play-in + 4-team main), 4 matches, no byes", () => {
     const { matches, totalRounds, hasByes } = generateSingleElimination(5)
-    expect(totalRounds).toBe(3)
-    expect(matches).toHaveLength(7)
-    expect(hasByes).toBe(true)
+    expect(hasByes).toBe(false)
+    expect(totalRounds).toBe(3) // play-in + semis + final
+    expect(matches).toHaveLength(4) // 1 play-in + 2 main R1 + 1 final
+    const playIn = matches.filter((m) => m.round === 1)
+    expect(playIn).toHaveLength(1)
+    // Play-in pairs the two lowest seeds (4 vs 5) and feeds a main-round slot.
+    expect([playIn[0].team1Seed, playIn[0].team2Seed].sort((a, b) => a! - b!)).toEqual([4, 5])
+    const fed = matches.find((m) => m.fromMatch1Pos === playIn[0].position || m.fromMatch2Pos === playIn[0].position)
+    expect(fed?.round).toBe(2)
+  })
+
+  it("19 teams (beginner bracket): 3 play-in matches feeding a 16-team main draw", () => {
+    const { matches, totalRounds, hasByes } = generateSingleElimination(19)
+    expect(hasByes).toBe(false)
+    // base = 16, overflow = 3 -> play-in(3) + R16(8) + QF(4) + SF(2) + Final(1)
+    expect(totalRounds).toBe(5)
+    expect(matches.filter((m) => m.round === 1)).toHaveLength(3) // play-in
+    expect(matches.filter((m) => m.round === 2)).toHaveLength(8) // round of 16
+    expect(matches.filter((m) => m.round === 3)).toHaveLength(4) // QF
+    expect(matches.filter((m) => m.round === 4)).toHaveLength(2) // SF
+    expect(matches.filter((m) => m.round === 5)).toHaveLength(1) // Final
+    expect(matches).toHaveLength(18)
+    // Every one of the 19 seeds appears exactly once as a starting team.
+    const startSeeds = matches
+      .flatMap((m) => [m.team1Seed, m.team2Seed])
+      .filter((s): s is number => s !== null)
+    expect(new Set(startSeeds).size).toBe(19)
+    expect(startSeeds).toHaveLength(19)
+  })
+
+  it("6 and 7 teams: play-in with no byes, every team plays", () => {
+    for (const n of [6, 7]) {
+      const { matches, hasByes } = generateSingleElimination(n)
+      expect(hasByes).toBe(false)
+      const seeds = matches
+        .flatMap((m) => [m.team1Seed, m.team2Seed])
+        .filter((s): s is number => s !== null)
+      expect(new Set(seeds).size).toBe(n)
+    }
   })
 
   it("2 teams: 1 round, 1 match", () => {
@@ -160,21 +197,27 @@ describe("advanceWinner with loser routing", () => {
 })
 
 describe("resolveByes", () => {
-  it("auto-advances bye teams into the next round (5 teams)", () => {
-    const { matches } = generateSingleElimination(5)
-    const { matches: resolved, byeWinners } = resolveByes(matches)
+  // A synthetic round-1 match with a single team (the other slot null) is a bye.
+  const byeFixture = (): BracketMatch[] => [
+    { position: 1, round: 1, bracketSide: "WINNERS", team1Seed: 1, team2Seed: null },
+    { position: 2, round: 1, bracketSide: "WINNERS", team1Seed: 2, team2Seed: 3 },
+    {
+      position: 3,
+      round: 2,
+      bracketSide: "WINNERS",
+      team1Seed: null,
+      team2Seed: null,
+      fromMatch1Pos: 1,
+      fromMatch2Pos: 2,
+    },
+  ]
 
-    // 5 teams in a size-8 bracket -> 3 first-round byes (seeds 1, 2, 3).
-    expect(byeWinners.size).toBe(3)
-
-    // Every bye winner must appear in a round-2 slot.
-    for (const [pos, seed] of byeWinners) {
-      const dependent = resolved.find(
-        (m) => m.fromMatch1Pos === pos || m.fromMatch2Pos === pos
-      )
-      expect(dependent).toBeDefined()
-      expect([dependent!.team1Seed, dependent!.team2Seed]).toContain(seed)
-    }
+  it("auto-advances a bye team into the next round", () => {
+    const { matches: resolved, byeWinners } = resolveByes(byeFixture())
+    expect(byeWinners.size).toBe(1)
+    expect(byeWinners.get(1)).toBe(1)
+    const fed = resolved.find((m) => m.position === 3)
+    expect(fed?.team1Seed).toBe(1)
   })
 
   it("produces no bye winners for a full power-of-2 bracket", () => {
@@ -183,11 +226,17 @@ describe("resolveByes", () => {
     expect(byeWinners.size).toBe(0)
   })
 
+  it("produces no bye winners for a play-in bracket (every team plays)", () => {
+    const { matches } = generateSingleElimination(19)
+    const { byeWinners } = resolveByes(matches)
+    expect(byeWinners.size).toBe(0)
+  })
+
   it("does not mutate the input matches", () => {
-    const { matches } = generateSingleElimination(5)
-    const before = JSON.stringify(matches)
-    resolveByes(matches)
-    expect(JSON.stringify(matches)).toBe(before)
+    const input = byeFixture()
+    const before = JSON.stringify(input)
+    resolveByes(input)
+    expect(JSON.stringify(input)).toBe(before)
   })
 
   it("ignores losers-bracket matches in double elimination", () => {

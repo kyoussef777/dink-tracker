@@ -89,7 +89,14 @@ export default async function BracketDetailPage({
           </div>
           <p className="text-sm text-muted-foreground">{bracketFormatLabel(bracket.format)}</p>
         </div>
-        {isAdmin && <BracketActions bracketId={bracket.id} tournamentId={tournamentId} hasTeams={hasTeams} />}
+        {isAdmin && (
+          <BracketActions
+            bracketId={bracket.id}
+            tournamentId={tournamentId}
+            hasTeams={hasTeams}
+            maxActiveMatches={bracket.maxActiveMatches}
+          />
+        )}
       </div>
 
       <Separator />
