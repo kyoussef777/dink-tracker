@@ -1,16 +1,29 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, CircleDot } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { TournamentStatus } from "@prisma/client"
+
+const STATUSES: { value: TournamentStatus; label: string }[] = [
+  { value: "DRAFT", label: "Draft" },
+  { value: "REGISTRATION", label: "Registration" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
+]
 import {
   Dialog,
   DialogContent,
@@ -37,6 +50,22 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  async function handleStatus(status: TournamentStatus) {
+    if (status === tournament.status) return
+    try {
+      const res = await fetch(`/api/tournaments/${tournament.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? "Failed")
+      toast.success(`Status set to ${status.toLowerCase()}`)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update status")
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true)
     try {
@@ -59,11 +88,31 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             <Pencil className="h-4 w-4" />
-            Edit
+            Edit details
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <CircleDot className="h-4 w-4" />
+              Set status
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Current: {tournament.status.toLowerCase()}
+              </DropdownMenuLabel>
+              {STATUSES.map((s) => (
+                <DropdownMenuItem
+                  key={s.value}
+                  disabled={s.value === tournament.status}
+                  onSelect={() => handleStatus(s.value)}
+                >
+                  {s.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"

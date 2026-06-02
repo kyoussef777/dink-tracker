@@ -65,7 +65,7 @@ export default async function CourtsPage({ params }: { params: Promise<{ id: str
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Courts</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Courts</h1>
           <p className="text-sm text-muted-foreground">
             {configured.length} configured · {liveCount} live now
           </p>

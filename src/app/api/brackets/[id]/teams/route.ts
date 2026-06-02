@@ -38,12 +38,34 @@ export async function POST(req: Request, { params }: Params) {
     include: { _count: { select: { teams: true } } },
   })
   if (!bracket) return Response.json({ error: "Not found" }, { status: 404 })
-  if (bracket._count.teams > 0) {
-    return Response.json({ error: "Teams already added. Delete bracket and recreate to change teams." }, { status: 400 })
-  }
 
   const data = await parseBody(req, AddTeamsSchema)
   if (data instanceof Response) return data
+
+  const existingCount = bracket._count.teams
+
+  // Additive mode: a bracket that already has teams just gets more teams added
+  // (seeded after the current ones); the admin regenerates the bracket to
+  // rebuild matches. Initial mode generates matches immediately.
+  if (existingCount > 0) {
+    const created = await db.$transaction(
+      data.teams.map((t, idx) =>
+        db.team.create({
+          data: {
+            bracketId: id,
+            name: t.name,
+            seed: existingCount + idx + 1,
+            players: { create: t.players },
+          },
+        })
+      )
+    )
+    await linkPlayersByEmail(data.teams.flatMap((t) => t.players.map((p) => p.email).filter(Boolean) as string[]))
+    return Response.json(
+      { data: { teamCount: existingCount + created.length, added: created.length, regenerate: true } },
+      { status: 201 }
+    )
+  }
 
   if (bracket.format === "DOUBLE_ELIMINATION") {
     const n = data.teams.length

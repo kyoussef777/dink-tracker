@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href={isAdmin ? "/tournaments" : "/my"} className="flex items-center gap-2">
             <Logo size={26} />
           </Link>
-          <nav className="flex items-center gap-1 sm:gap-4">
+          <nav className="flex items-center gap-0.5 sm:gap-3">
             <NavLink href="/my" icon={<UserIcon className="h-4 w-4" />} label="My matches" />
             {isAdmin && (
               <>
@@ -38,7 +38,7 @@ function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; l
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:py-1.5"
+      className="inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-9"
       aria-label={label}
     >
       <span className="sm:hidden">{icon}</span>

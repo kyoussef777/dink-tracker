@@ -78,7 +78,7 @@ export default async function TournamentDetailPage({
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{tournament.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{tournament.name}</h1>
             <StatusBadge kind="tournament" status={tournament.status as TournamentStatus} />
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">

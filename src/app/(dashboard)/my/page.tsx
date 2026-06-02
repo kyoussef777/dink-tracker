@@ -43,7 +43,7 @@ export default async function MyPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My matches</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">My matches</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             You&apos;ll see your tournaments here once an organizer adds you to a team.
           </p>
@@ -64,7 +64,7 @@ export default async function MyPage() {
         <LiveSubscriber key={id} tournamentId={id} />
       ))}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">My matches</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">My matches</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           {teams.length} {teams.length === 1 ? "team" : "teams"} across{" "}
           {tournamentIds.length} {tournamentIds.length === 1 ? "tournament" : "tournaments"}

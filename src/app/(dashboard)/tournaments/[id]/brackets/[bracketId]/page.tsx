@@ -15,6 +15,7 @@ import { StandingsTable } from "@/components/bracket/StandingsTable"
 import { ChampionCard } from "@/components/bracket/ChampionCard"
 import { AddTeamsForm } from "@/components/bracket/AddTeamsForm"
 import { BracketActions } from "@/components/bracket/BracketActions"
+import { EditTeamButton } from "@/components/bracket/TeamManageDialog"
 import { LiveSubscriber } from "@/components/shared/LiveSubscriber"
 import { computeStandings } from "@/lib/standings"
 import { bracketFormatLabel } from "@/lib/utils"
@@ -58,6 +59,8 @@ export default async function BracketDetailPage({
     .filter((t) => t.players.some((p) => p.userId === current.userId))
     .map((t) => t.id)
   const champion = computeChampion(bracket)
+  // Admins can move any team in the bracket into a match slot.
+  const teamOptions = isAdmin ? bracket.teams.map((t) => ({ id: t.id, name: t.name })) : undefined
 
   return (
     <div className="space-y-8">
@@ -76,7 +79,7 @@ export default async function BracketDetailPage({
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Skill level</p>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{bracket.skillLevel}</h1>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{bracket.skillLevel}</h1>
             <StatusBadge kind="bracket" status={bracket.status as BracketStatus} />
             {!isAdmin && myTeamIds.length > 0 && (
               <Badge variant="outline" className="border-primary/40 text-primary">
@@ -86,7 +89,7 @@ export default async function BracketDetailPage({
           </div>
           <p className="text-sm text-muted-foreground">{bracketFormatLabel(bracket.format)}</p>
         </div>
-        {isAdmin && <BracketActions bracketId={bracket.id} tournamentId={tournamentId} />}
+        {isAdmin && <BracketActions bracketId={bracket.id} tournamentId={tournamentId} hasTeams={hasTeams} />}
       </div>
 
       <Separator />
@@ -127,6 +130,7 @@ export default async function BracketDetailPage({
                 courtOptions={courtOptions}
                 readOnly={!isAdmin}
                 highlightTeamIds={myTeamIds}
+                teamOptions={teamOptions}
               />
             ) : bracket.format === "DOUBLE_ELIMINATION" ? (
               <DoubleEliminationView
@@ -134,6 +138,7 @@ export default async function BracketDetailPage({
                 courtOptions={courtOptions}
                 readOnly={!isAdmin}
                 highlightTeamIds={myTeamIds}
+                teamOptions={teamOptions}
               />
             ) : (
               <BracketTree
@@ -142,6 +147,7 @@ export default async function BracketDetailPage({
                 courtOptions={courtOptions}
                 readOnly={!isAdmin}
                 highlightTeamIds={myTeamIds}
+                teamOptions={teamOptions}
               />
             )}
           </section>
@@ -157,15 +163,22 @@ export default async function BracketDetailPage({
           )}
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight">Teams</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xl font-semibold tracking-tight">Teams</h2>
+              {isAdmin && (
+                <p className="text-xs text-muted-foreground">
+                  Tip: edit a team, then regenerate the bracket to rebuild the draw.
+                </p>
+              )}
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {bracket.teams.map((team) => {
                 const mine = myTeamIds.includes(team.id)
                 return (
                   <Card key={team.id} className={mine ? "border-primary/40" : undefined}>
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-base">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="min-w-0 truncate text-base">
                           {team.name}
                           {mine && (
                             <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-primary">
@@ -173,17 +186,35 @@ export default async function BracketDetailPage({
                             </span>
                           )}
                         </CardTitle>
-                        {team.seed != null && (
-                          <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                            Seed {team.seed}
-                          </span>
-                        )}
+                        <div className="flex shrink-0 items-center gap-1">
+                          {team.seed != null && (
+                            <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                              Seed {team.seed}
+                            </span>
+                          )}
+                          {isAdmin && (
+                            <EditTeamButton
+                              bracketId={bracket.id}
+                              team={{
+                                id: team.id,
+                                name: team.name,
+                                seed: team.seed,
+                                players: team.players.map((p) => ({
+                                  name: p.name,
+                                  email: p.email,
+                                  phone: p.phone,
+                                  rating: p.rating,
+                                })),
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-1.5 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5" />
-                        {team.players.map((p) => p.name).join(" / ")}
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{team.players.map((p) => p.name).join(" / ")}</span>
                       </div>
                     </CardContent>
                   </Card>

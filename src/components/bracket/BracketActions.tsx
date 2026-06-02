@@ -1,10 +1,10 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Trash2 } from "lucide-react"
+import { MoreHorizontal, Trash2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,13 +16,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function BracketActions({ bracketId, tournamentId }: { bracketId: string; tournamentId: string }) {
+export function BracketActions({
+  bracketId,
+  tournamentId,
+  hasTeams,
+}: {
+  bracketId: string
+  tournamentId: string
+  hasTeams?: boolean
+}) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [regenOpen, setRegenOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   async function handleDelete() {
-    setDeleting(true)
+    setBusy(true)
     try {
       const res = await fetch(`/api/brackets/${bracketId}`, { method: "DELETE" })
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed")
@@ -31,7 +40,22 @@ export function BracketActions({ bracketId, tournamentId }: { bracketId: string;
       router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete")
-      setDeleting(false)
+      setBusy(false)
+    }
+  }
+
+  async function handleRegenerate() {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/brackets/${bracketId}/regenerate`, { method: "POST" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? "Failed")
+      toast.success(`Bracket rebuilt — ${json.data.matchCount} matches`)
+      setRegenOpen(false)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to regenerate")
+      setBusy(false)
     }
   }
 
@@ -43,18 +67,45 @@ export function BracketActions({ bracketId, tournamentId }: { bracketId: string;
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-52">
+          {hasTeams && (
+            <>
+              <DropdownMenuItem onSelect={() => setRegenOpen(true)}>
+                <RefreshCw className="h-4 w-4" />
+                Regenerate bracket
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
-            onSelect={() => setOpen(true)}
+            onSelect={() => setDeleteOpen(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Delete
+            Delete bracket
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialog open={regenOpen} onOpenChange={setRegenOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate this bracket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rebuilds the draw from the current teams in seed order. All existing matches, scores, and results are
+              discarded. Teams and players are kept. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRegenerate} disabled={busy}>
+              {busy ? "Rebuilding..." : "Regenerate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this bracket?</AlertDialogTitle>
@@ -63,13 +114,13 @@ export function BracketActions({ bracketId, tournamentId }: { bracketId: string;
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={busy}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "Deleting..." : "Delete"}
+              {busy ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

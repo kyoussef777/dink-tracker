@@ -2,6 +2,7 @@ import { Trophy } from "lucide-react"
 import { BracketTree } from "@/components/bracket/BracketTree"
 import { EditableMatchCard } from "@/components/match/EditableMatchCard"
 import { MatchCard } from "@/components/bracket/MatchCard"
+import type { TeamOption } from "@/components/match/MatchEditDialog"
 import type { Match, Team } from "@prisma/client"
 
 type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: Team | null }
@@ -11,9 +12,10 @@ interface Props {
   courtOptions: string[]
   readOnly?: boolean
   highlightTeamIds?: string[]
+  teamOptions?: TeamOption[]
 }
 
-export function DoubleEliminationView({ matches, courtOptions, readOnly, highlightTeamIds }: Props) {
+export function DoubleEliminationView({ matches, courtOptions, readOnly, highlightTeamIds, teamOptions }: Props) {
   const winners = matches.filter((m) => m.bracketSide === "WINNERS")
   const losers = matches.filter((m) => m.bracketSide === "LOSERS")
   const grandFinal = matches.filter((m) => m.bracketSide === "GRAND_FINAL")
@@ -36,6 +38,7 @@ export function DoubleEliminationView({ matches, courtOptions, readOnly, highlig
           courtOptions={courtOptions}
           readOnly={readOnly}
           highlightTeamIds={highlightTeamIds}
+          teamOptions={teamOptions}
         />
       </Section>
 
@@ -50,6 +53,7 @@ export function DoubleEliminationView({ matches, courtOptions, readOnly, highlig
             courtOptions={courtOptions}
             readOnly={readOnly}
             highlightTeamIds={highlightTeamIds}
+            teamOptions={teamOptions}
             roundLabel={losersRoundLabel}
           />
         </Section>
@@ -68,6 +72,7 @@ export function DoubleEliminationView({ matches, courtOptions, readOnly, highlig
                     match={m}
                     courtOptions={courtOptions}
                     highlightTeamIds={highlightTeamIds}
+                    teamOptions={teamOptions}
                   />
                 )
               )}
