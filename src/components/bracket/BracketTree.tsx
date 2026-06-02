@@ -1,5 +1,6 @@
 import { EditableMatchCard } from "@/components/match/EditableMatchCard"
 import { MatchCard } from "@/components/bracket/MatchCard"
+import type { TeamOption } from "@/components/match/MatchEditDialog"
 import type { Match, Team } from "@prisma/client"
 
 type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: Team | null }
@@ -10,10 +11,11 @@ interface Props {
   courtOptions: string[]
   readOnly?: boolean
   highlightTeamIds?: string[]
+  teamOptions?: TeamOption[]
   roundLabel?: (round: number, totalRounds: number) => string
 }
 
-export function BracketTree({ matches, totalRounds, courtOptions, readOnly, highlightTeamIds, roundLabel: roundLabelFn }: Props) {
+export function BracketTree({ matches, totalRounds, courtOptions, readOnly, highlightTeamIds, teamOptions, roundLabel: roundLabelFn }: Props) {
   const matchesByRound = new Map<number, MatchWithTeams[]>()
   for (const m of matches) {
     const arr = matchesByRound.get(m.round) ?? []
@@ -23,11 +25,11 @@ export function BracketTree({ matches, totalRounds, courtOptions, readOnly, high
 
   return (
     <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
-      <div className="flex min-w-max items-stretch gap-6 sm:gap-8">
+      <div className="flex min-w-max items-stretch gap-4 sm:gap-8">
         {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => {
           const roundMatches = (matchesByRound.get(round) ?? []).sort((a, b) => a.position - b.position)
           return (
-            <div key={round} className="flex w-60 shrink-0 flex-col sm:w-64">
+            <div key={round} className="flex w-52 shrink-0 flex-col sm:w-64">
               <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {(roundLabelFn ?? roundLabel)(round, totalRounds)}
               </h4>
@@ -47,6 +49,7 @@ export function BracketTree({ matches, totalRounds, courtOptions, readOnly, high
                       match={m}
                       courtOptions={courtOptions}
                       highlightTeamIds={highlightTeamIds}
+                      teamOptions={teamOptions}
                     />
                   )
                 )}

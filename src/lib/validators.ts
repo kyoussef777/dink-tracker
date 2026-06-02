@@ -34,7 +34,27 @@ export const MatchUpdateSchema = z.object({
   score2: z.array(z.number().int().min(0)).optional(),
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "BYE"]).optional(),
   court: z.string().max(50).nullable().optional(),
-  winnerId: z.string().cuid().optional(),
+  // null clears the slot/winner; admins can reassign teams or reopen a match.
+  winnerId: z.string().cuid().nullable().optional(),
+  team1Id: z.string().cuid().nullable().optional(),
+  team2Id: z.string().cuid().nullable().optional(),
+})
+
+export const TeamUpdateSchema = z.object({
+  name: z.string().min(1, "Team name is required").max(100).optional(),
+  seed: z.number().int().positive().nullable().optional(),
+  players: z
+    .array(
+      z.object({
+        name: z.string().min(1, "Player name is required").max(100),
+        rating: z.number().min(0).max(7).optional(),
+        email: z.string().email().optional().or(z.literal("")),
+        phone: z.string().max(30).optional().or(z.literal("")),
+      })
+    )
+    .min(1)
+    .max(4)
+    .optional(),
 })
 
 export const PlayerSearchSchema = z.object({
@@ -50,5 +70,6 @@ export type TournamentCreate = z.infer<typeof TournamentCreateSchema>
 export type TournamentUpdate = z.infer<typeof TournamentUpdateSchema>
 export type BracketCreate = z.infer<typeof BracketCreateSchema>
 export type TeamCreate = z.infer<typeof TeamCreateSchema>
+export type TeamUpdate = z.infer<typeof TeamUpdateSchema>
 export type MatchUpdate = z.infer<typeof MatchUpdateSchema>
 export type NotifyPlayers = z.infer<typeof NotifyPlayersSchema>

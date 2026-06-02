@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { MatchCard } from "@/components/bracket/MatchCard"
-import { MatchEditDialog } from "./MatchEditDialog"
+import { MatchEditDialog, type TeamOption } from "./MatchEditDialog"
 import type { Match, Team } from "@prisma/client"
 
 type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: Team | null }
@@ -10,19 +10,18 @@ interface Props {
   match: MatchWithTeams
   courtOptions: string[]
   highlightTeamIds?: string[]
+  teamOptions?: TeamOption[]
 }
 
-export function EditableMatchCard({ match, courtOptions, highlightTeamIds }: Props) {
+export function EditableMatchCard({ match, courtOptions, highlightTeamIds, teamOptions }: Props) {
   const [open, setOpen] = useState(false)
-  const disabled = match.status === "BYE"
 
   return (
     <>
       <button
         type="button"
-        onClick={() => !disabled && setOpen(true)}
-        disabled={disabled}
-        className="block w-full text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-ring rounded-lg disabled:cursor-not-allowed disabled:hover:translate-y-0"
+        onClick={() => setOpen(true)}
+        className="block w-full text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-ring rounded-lg"
         aria-label={`Edit match ${match.team1?.name ?? "TBD"} vs ${match.team2?.name ?? "TBD"}`}
       >
         <MatchCard match={match} highlightTeamIds={highlightTeamIds} />
@@ -31,6 +30,7 @@ export function EditableMatchCard({ match, courtOptions, highlightTeamIds }: Pro
         open={open}
         onOpenChange={setOpen}
         courtOptions={courtOptions}
+        teamOptions={teamOptions}
         match={{
           id: match.id,
           status: match.status,

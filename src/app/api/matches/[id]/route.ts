@@ -22,20 +22,56 @@ export async function PATCH(req: Request, { params }: Params) {
   })
   if (!match) return Response.json({ error: "Not found" }, { status: 404 })
 
-  const score1 = data.score1 ?? match.score1
-  const score2 = data.score2 ?? match.score2
-  const winnerId = computeWinner(score1, score2, match.team1Id, match.team2Id, data.winnerId)
+  // Admin team reassignment: move/swap a team into a slot, or clear it. Teams
+  // must belong to this bracket. Reassigning teams clears any stale scores/winner.
+  const team1Id = data.team1Id !== undefined ? data.team1Id : match.team1Id
+  const team2Id = data.team2Id !== undefined ? data.team2Id : match.team2Id
+  const teamsChanged = team1Id !== match.team1Id || team2Id !== match.team2Id
+
+  if (teamsChanged) {
+    const candidateIds = [team1Id, team2Id].filter((t): t is string => t !== null)
+    if (candidateIds.length > 0) {
+      const valid = await db.team.count({
+        where: { id: { in: candidateIds }, bracketId: match.bracket.id },
+      })
+      if (valid !== new Set(candidateIds).size) {
+        return Response.json({ error: "Team does not belong to this bracket" }, { status: 400 })
+      }
+    }
+    if (team1Id && team1Id === team2Id) {
+      return Response.json({ error: "A match needs two different teams" }, { status: 400 })
+    }
+  }
+
+  // When teams change, drop prior scores/winner so the slot starts clean.
+  const score1 = teamsChanged ? (data.score1 ?? []) : (data.score1 ?? match.score1)
+  const score2 = teamsChanged ? (data.score2 ?? []) : (data.score2 ?? match.score2)
+
+  // winnerId: a string sets it explicitly, null clears it (reopen), undefined
+  // computes from scores. Teams changing also clears a now-invalid winner.
+  let winnerId: string | null
+  if (data.winnerId === null || teamsChanged) {
+    winnerId = data.winnerId === null ? null : computeWinner(score1, score2, team1Id, team2Id)
+  } else {
+    winnerId = computeWinner(score1, score2, team1Id, team2Id, data.winnerId)
+  }
+  if (winnerId && winnerId !== team1Id && winnerId !== team2Id) {
+    return Response.json({ error: "Winner must be one of the two teams" }, { status: 400 })
+  }
 
   let nextStatus = data.status
   if (!nextStatus) {
     if (winnerId) nextStatus = "COMPLETED"
     else if (score1.length > 0 || score2.length > 0) nextStatus = "IN_PROGRESS"
+    else if (teamsChanged) nextStatus = "PENDING"
   }
 
   const courtPatch =
     data.court === undefined ? match.court : data.court === "" || data.court === null ? null : data.court
 
   const updateData: Prisma.MatchUpdateInput = {
+    team1: team1Id ? { connect: { id: team1Id } } : { disconnect: true },
+    team2: team2Id ? { connect: { id: team2Id } } : { disconnect: true },
     score1,
     score2,
     court: courtPatch,
@@ -52,10 +88,13 @@ export async function PATCH(req: Request, { params }: Params) {
 
   let advanced = false
   if (winnerId) {
-    const loserId =
-      winnerId === match.team1Id ? match.team2Id : winnerId === match.team2Id ? match.team1Id : null
+    const loserId = winnerId === team1Id ? team2Id : winnerId === team2Id ? team1Id : null
     advanced = await advanceWinnerInDb(match.bracket.id, match.position, winnerId, loserId)
     await maybeCompleteBracket(match.bracket.id)
+  } else if (match.winnerId) {
+    // Winner was cleared (match reopened or teams changed): pull the old winner
+    // back out of any dependent matches so the bracket stays consistent.
+    await retractAdvancementInDb(match.bracket.id, match.position)
   }
 
   await pusherServer
@@ -150,6 +189,48 @@ async function advanceWinnerInDb(
   if (updates.length === 0) return false
   await db.$transaction(updates)
   return true
+}
+
+/**
+ * Reverse of advanceWinnerInDb: when a completed match is reopened, null out the
+ * slots in dependent matches that were fed from this position so the bracket
+ * doesn't keep a now-invalid team downstream. Also reopens a COMPLETED bracket.
+ */
+async function retractAdvancementInDb(bracketId: string, completedPos: number) {
+  const dependents = await db.match.findMany({
+    where: {
+      bracketId,
+      OR: [{ fromMatch1Pos: completedPos }, { fromMatch2Pos: completedPos }],
+    },
+    select: { id: true, fromMatch1Pos: true, status: true },
+  })
+
+  const updates: Prisma.PrismaPromise<unknown>[] = []
+  for (const dep of dependents) {
+    const slot1 = dep.fromMatch1Pos === completedPos
+    updates.push(
+      db.match.update({
+        where: { id: dep.id },
+        data: slot1
+          ? { team1Id: null, score1: [], score2: [], winnerId: null, status: "PENDING", completedAt: null }
+          : { team2Id: null, score1: [], score2: [], winnerId: null, status: "PENDING", completedAt: null },
+      })
+    )
+  }
+  if (updates.length > 0) await db.$transaction(updates)
+
+  // If the bracket had been auto-completed, reopen it (and its tournament).
+  const bracket = await db.bracket.findUnique({
+    where: { id: bracketId },
+    select: { status: true, tournamentId: true },
+  })
+  if (bracket?.status === "COMPLETED") {
+    await db.bracket.update({ where: { id: bracketId }, data: { status: "ACTIVE" } })
+    await db.tournament.updateMany({
+      where: { id: bracket.tournamentId, status: "COMPLETED" },
+      data: { status: "ACTIVE" },
+    })
+  }
 }
 
 async function maybeCompleteBracket(bracketId: string) {

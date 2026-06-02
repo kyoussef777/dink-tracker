@@ -1,5 +1,6 @@
 import { EditableMatchCard } from "@/components/match/EditableMatchCard"
 import { MatchCard } from "@/components/bracket/MatchCard"
+import type { TeamOption } from "@/components/match/MatchEditDialog"
 import type { Match, Team } from "@prisma/client"
 
 type MatchWithTeams = Match & { team1: Team | null; team2: Team | null; winner: Team | null }
@@ -10,6 +11,7 @@ interface Props {
   courtOptions: string[]
   readOnly?: boolean
   highlightTeamIds?: string[]
+  teamOptions?: TeamOption[]
 }
 
 export function RoundRobinView({
@@ -18,6 +20,7 @@ export function RoundRobinView({
   courtOptions,
   readOnly,
   highlightTeamIds,
+  teamOptions,
 }: Props) {
   const byRound = new Map<number, MatchWithTeams[]>()
   for (const m of matches) {
@@ -52,6 +55,7 @@ export function RoundRobinView({
                     match={m}
                     courtOptions={courtOptions}
                     highlightTeamIds={highlightTeamIds}
+                    teamOptions={teamOptions}
                   />
                 )
               )}

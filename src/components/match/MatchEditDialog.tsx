@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 
 const UNASSIGNED = "__unassigned"
+const NONE = "__none"
 
 export interface EditableMatch {
   id: string
@@ -34,17 +35,26 @@ export interface EditableMatch {
   team2: { id: string; name: string } | null
 }
 
+export interface TeamOption {
+  id: string
+  name: string
+}
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   match: EditableMatch
   courtOptions: string[]
+  /** All teams in the bracket — lets admins move/swap teams into this match. */
+  teamOptions?: TeamOption[]
 }
 
-export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Props) {
+export function MatchEditDialog({ open, onOpenChange, match, courtOptions, teamOptions = [] }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [court, setCourt] = useState<string>(match.court ?? UNASSIGNED)
+  const [team1Id, setTeam1Id] = useState<string>(match.team1?.id ?? NONE)
+  const [team2Id, setTeam2Id] = useState<string>(match.team2?.id ?? NONE)
   const [games, setGames] = useState<Array<{ a: string; b: string }>>(() => {
     const len = Math.max(match.score1.length, match.score2.length, 1)
     return Array.from({ length: len }, (_, i) => ({
@@ -53,9 +63,13 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Pro
     }))
   })
 
-  const bothTeams = match.team1 && match.team2
-  const team1Name = match.team1?.name ?? "Team 1"
-  const team2Name = match.team2?.name ?? "Team 2"
+  const canEditTeams = teamOptions.length > 0
+  const resolvedT1 = teamOptions.find((t) => t.id === team1Id) ?? match.team1
+  const resolvedT2 = teamOptions.find((t) => t.id === team2Id) ?? match.team2
+  const bothTeams = team1Id !== NONE && team2Id !== NONE
+  const team1Name = resolvedT1?.name ?? "Team 1"
+  const team2Name = resolvedT2?.name ?? "Team 2"
+  const teamsChanged = team1Id !== (match.team1?.id ?? NONE) || team2Id !== (match.team2?.id ?? NONE)
 
   function addGame() {
     setGames((g) => [...g, { a: "", b: "" }])
@@ -69,28 +83,42 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Pro
     setGames((g) => g.map((row, idx) => (idx === i ? { ...row, [side]: value } : row)))
   }
 
-  async function save(action: "save" | "complete") {
+  async function save(action: "save" | "complete" | "reopen", winnerId?: string) {
     const score1: number[] = []
     const score2: number[] = []
-    for (const g of games) {
-      const a = g.a === "" ? null : Number(g.a)
-      const b = g.b === "" ? null : Number(g.b)
-      if (a === null && b === null) continue
-      if (a === null || b === null || Number.isNaN(a) || Number.isNaN(b) || a < 0 || b < 0) {
-        toast.error("Each game needs a numeric score for both teams")
-        return
+    if (action !== "reopen") {
+      for (const g of games) {
+        const a = g.a === "" ? null : Number(g.a)
+        const b = g.b === "" ? null : Number(g.b)
+        if (a === null && b === null) continue
+        if (a === null || b === null || Number.isNaN(a) || Number.isNaN(b) || a < 0 || b < 0) {
+          toast.error("Each game needs a numeric score for both teams")
+          return
+        }
+        score1.push(a)
+        score2.push(b)
       }
-      score1.push(a)
-      score2.push(b)
     }
 
     const body: Record<string, unknown> = {
-      score1,
-      score2,
       court: court === UNASSIGNED ? "" : court,
     }
-    if (action === "complete") body.status = "COMPLETED"
-    else if (score1.length > 0) body.status = "IN_PROGRESS"
+    if (canEditTeams) {
+      body.team1Id = team1Id === NONE ? null : team1Id
+      body.team2Id = team2Id === NONE ? null : team2Id
+    }
+    if (action === "reopen") {
+      body.score1 = []
+      body.score2 = []
+      body.winnerId = null
+      body.status = "PENDING"
+    } else {
+      body.score1 = score1
+      body.score2 = score2
+      if (winnerId) body.winnerId = winnerId
+      if (action === "complete") body.status = "COMPLETED"
+      else if (score1.length > 0) body.status = "IN_PROGRESS"
+    }
 
     start(async () => {
       const res = await fetch(`/api/matches/${match.id}`, {
@@ -103,7 +131,9 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Pro
         toast.error(json.error ?? "Failed to update match")
         return
       }
-      toast.success(action === "complete" ? "Match completed" : "Match updated")
+      toast.success(
+        action === "complete" ? "Match completed" : action === "reopen" ? "Match reopened" : "Match updated"
+      )
       onOpenChange(false)
       router.refresh()
     })
@@ -119,44 +149,83 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Pro
           </DialogDescription>
         </DialogHeader>
 
-        {!bothTeams ? (
-          <p className="text-sm text-muted-foreground">
-            This match needs both teams set before scoring. Complete the previous round first.
-          </p>
-        ) : (
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <Label>Court</Label>
-              <Select value={court} onValueChange={setCourt}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                  {courtOptions.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {courtOptions.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  No courts configured. Set a court count on the tournament to enable assignment.
-                </p>
-              )}
+        <div className="space-y-5">
+          {canEditTeams && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Team 1</Label>
+                <Select value={team1Id} onValueChange={setTeam1Id}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Unassigned</SelectItem>
+                    {teamOptions.map((t) => (
+                      <SelectItem key={t.id} value={t.id} disabled={t.id === team2Id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Team 2</Label>
+                <Select value={team2Id} onValueChange={setTeam2Id}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Unassigned</SelectItem>
+                    {teamOptions.map((t) => (
+                      <SelectItem key={t.id} value={t.id} disabled={t.id === team1Id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+          )}
 
+          <div className="space-y-2">
+            <Label>Court</Label>
+            <Select value={court} onValueChange={setCourt}>
+              <SelectTrigger>
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                {courtOptions.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {courtOptions.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No courts configured. Set a court count on the tournament to enable assignment.
+              </p>
+            )}
+          </div>
+
+          {!bothTeams ? (
+            <p className="text-sm text-muted-foreground">
+              {canEditTeams
+                ? "Assign both teams above to enter scores."
+                : "This match needs both teams set before scoring. Complete the previous round first."}
+            </p>
+          ) : (
             <div className="space-y-2">
-              <div className="grid grid-cols-[1fr_5rem_5rem_2rem] items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                <span>Game</span>
+              <div className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="w-12">Game</span>
                 <span className="truncate text-right">{team1Name}</span>
                 <span className="truncate text-right">{team2Name}</span>
-                <span />
+                <span className="w-8" />
               </div>
               {games.map((g, i) => (
-                <div key={i} className="grid grid-cols-[1fr_5rem_5rem_2rem] items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Game {i + 1}</span>
+                <div key={i} className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-2">
+                  <span className="w-12 text-sm text-muted-foreground">#{i + 1}</span>
                   <Input
                     type="number"
                     inputMode="numeric"
@@ -164,6 +233,7 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Pro
                     value={g.a}
                     onChange={(e) => setGame(i, "a", e.target.value)}
                     className="text-right tabular-nums"
+                    aria-label={`${team1Name} game ${i + 1} score`}
                   />
                   <Input
                     type="number"
@@ -172,12 +242,13 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Pro
                     value={g.b}
                     onChange={(e) => setGame(i, "b", e.target.value)}
                     className="text-right tabular-nums"
+                    aria-label={`${team2Name} game ${i + 1} score`}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9"
                     onClick={() => removeGame(i)}
                     disabled={games.length === 1}
                     aria-label={`Remove game ${i + 1}`}
@@ -190,24 +261,60 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions }: Pro
                 <Plus className="h-3.5 w-3.5" />
                 Add game
               </Button>
-            </div>
-          </div>
-        )}
 
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
-            Cancel
-          </Button>
-          {bothTeams && (
-            <>
-              <Button type="button" variant="outline" onClick={() => save("save")} disabled={pending}>
-                {pending ? "Saving..." : "Save"}
-              </Button>
-              <Button type="button" onClick={() => save("complete")} disabled={pending}>
-                Complete match
-              </Button>
-            </>
+              {/* Manual winner override — useful for forfeits/walkovers. */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Set winner
+                </span>
+                {resolvedT1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => save("complete", resolvedT1.id)}
+                  >
+                    {team1Name}
+                  </Button>
+                )}
+                {resolvedT2 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => save("complete", resolvedT2.id)}
+                  >
+                    {team2Name}
+                  </Button>
+                )}
+              </div>
+            </div>
           )}
+        </div>
+
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+          <div>
+            {match.status === "COMPLETED" && (
+              <Button type="button" variant="ghost" onClick={() => save("reopen")} disabled={pending}>
+                Reopen match
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button type="button" variant="outline" onClick={() => save("save")} disabled={pending || (!bothTeams && !teamsChanged)}>
+              {pending ? "Saving..." : "Save"}
+            </Button>
+            {bothTeams && (
+              <Button type="button" onClick={() => save("complete")} disabled={pending}>
+                Complete
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
