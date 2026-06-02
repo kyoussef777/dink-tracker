@@ -9,7 +9,7 @@ export async function GET(_req: Request, { params }: Params) {
 
   const { id } = await params
   const tournament = await db.tournament.findFirst({
-    where: { id, createdBy: userId },
+    where: { id },
     select: { id: true },
   })
   if (!tournament) return Response.json({ error: "Not found" }, { status: 404 })

@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if (data instanceof Response) return data
 
   const existing = await db.bracket.findFirst({
-    where: { id, tournament: { createdBy: userId } },
+    where: { id },
     select: { tournamentId: true },
   })
   if (!existing) return Response.json({ error: "Not found" }, { status: 404 })
@@ -43,7 +43,7 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params
   const where =
     current.role === "ADMIN"
-      ? { id, tournament: { createdBy: current.userId } }
+      ? { id }
       : { id, teams: { some: { players: { some: { userId: current.userId } } } } }
   const bracket = await db.bracket.findFirst({
     where,
@@ -67,7 +67,7 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   const { id } = await params
   const existing = await db.bracket.findFirst({
-    where: { id, tournament: { createdBy: userId } },
+    where: { id },
     select: { id: true },
   })
 

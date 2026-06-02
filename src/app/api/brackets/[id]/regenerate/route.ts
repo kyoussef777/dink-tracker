@@ -16,7 +16,7 @@ export async function POST(_req: Request, { params }: Params) {
 
   const { id } = await params
   const bracket = await db.bracket.findFirst({
-    where: { id, tournament: { createdBy: userId } },
+    where: { id },
     include: {
       tournament: { select: { id: true } },
       teams: { orderBy: [{ seed: "asc" }, { id: "asc" }] },

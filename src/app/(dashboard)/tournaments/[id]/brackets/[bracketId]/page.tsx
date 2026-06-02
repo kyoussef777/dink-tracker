@@ -32,7 +32,7 @@ export default async function BracketDetailPage({
 
   const isAdmin = current.role === "ADMIN"
   const where = isAdmin
-    ? { id: bracketId, tournament: { createdBy: current.userId, id: tournamentId } }
+    ? { id: bracketId, tournament: { id: tournamentId } }
     : {
         id: bracketId,
         tournament: { id: tournamentId },

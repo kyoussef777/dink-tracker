@@ -34,7 +34,7 @@ export async function POST(req: Request, { params }: Params) {
 
   const { id } = await params
   const bracket = await db.bracket.findFirst({
-    where: { id, tournament: { createdBy: userId } },
+    where: { id },
     include: { _count: { select: { teams: true } } },
   })
   if (!bracket) return Response.json({ error: "Not found" }, { status: 404 })

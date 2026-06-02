@@ -34,7 +34,7 @@ export default async function TournamentDetailPage({
 
   const where =
     current.role === "ADMIN"
-      ? { id, createdBy: current.userId }
+      ? { id }
       : {
           id,
           brackets: { some: { teams: { some: { players: { some: { userId: current.userId } } } } } },

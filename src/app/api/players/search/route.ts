@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
   const tournamentScope =
     current.role === "ADMIN"
-      ? { tournament: { createdBy: current.userId } }
+      ? {}
       : { teams: { some: { players: { some: { userId: current.userId } } } } }
 
   const players = await db.player.findMany({

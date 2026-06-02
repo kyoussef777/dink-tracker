@@ -17,7 +17,7 @@ export default async function CourtsPage({ params }: { params: Promise<{ id: str
   if (current.role !== "ADMIN") redirect(`/tournaments/${id}`)
 
   const tournament = await db.tournament.findFirst({
-    where: { id, createdBy: current.userId },
+    where: { id },
     select: { id: true, name: true, courtNames: true },
   })
   if (!tournament) notFound()

@@ -17,7 +17,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if (data instanceof Response) return data
 
   const match = await db.match.findFirst({
-    where: { id, bracket: { tournament: { createdBy: userId } } },
+    where: { id },
     include: { bracket: { select: { id: true, tournamentId: true, maxActiveMatches: true } } },
   })
   if (!match) return Response.json({ error: "Not found" }, { status: 404 })

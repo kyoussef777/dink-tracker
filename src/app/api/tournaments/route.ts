@@ -9,7 +9,7 @@ export async function GET() {
 
   const where =
     current.role === "ADMIN"
-      ? { createdBy: current.userId }
+      ? {}
       : { brackets: { some: { teams: { some: { players: { some: { userId: current.userId } } } } } } }
 
   const tournaments = await db.tournament.findMany({
