@@ -32,6 +32,9 @@ model Bracket {
   format       BracketFormat @default(SINGLE_ELIMINATION)
   status       BracketStatus @default(PENDING)
   rounds       Int           @default(0)
+  // Wave/release cap: max matches allowed to be IN_PROGRESS at once (per the
+  // courts allotted to this bracket). 0 = unlimited. Lets play trickle in.
+  maxActiveMatches Int        @default(0)
   teams        Team[]
   matches      Match[]
   createdAt    DateTime      @default(now())

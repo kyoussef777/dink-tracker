@@ -54,6 +54,7 @@ export function BracketTree({ matches, totalRounds, courtOptions, readOnly, high
                       courtOptions={courtOptions}
                       highlightTeamIds={highlightTeamIds}
                       teamOptions={teamOptions}
+                      totalRounds={totalRounds}
                     />
                   )
                 )}

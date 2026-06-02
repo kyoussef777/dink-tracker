@@ -1,7 +1,40 @@
 import { db } from "@/lib/db"
+import { parseBody } from "@/lib/api"
 import { getCurrentRole, requireAdmin } from "@/lib/auth"
+import { BracketUpdateSchema } from "@/lib/validators"
+import { pusherServer } from "@/lib/pusher"
 
 type Params = { params: Promise<{ id: string }> }
+
+/** Update bracket settings (skill level, wave cap). Admin only. */
+export async function PATCH(req: Request, { params }: Params) {
+  const userId = await requireAdmin()
+  if (userId instanceof Response) return userId
+
+  const { id } = await params
+  const data = await parseBody(req, BracketUpdateSchema)
+  if (data instanceof Response) return data
+
+  const existing = await db.bracket.findFirst({
+    where: { id, tournament: { createdBy: userId } },
+    select: { tournamentId: true },
+  })
+  if (!existing) return Response.json({ error: "Not found" }, { status: 404 })
+
+  const updated = await db.bracket.update({
+    where: { id },
+    data: {
+      ...(data.skillLevel !== undefined ? { skillLevel: data.skillLevel } : {}),
+      ...(data.maxActiveMatches !== undefined ? { maxActiveMatches: data.maxActiveMatches } : {}),
+    },
+  })
+
+  await pusherServer
+    .trigger(`tournament-${existing.tournamentId}`, "bracket-advanced", { bracketId: id })
+    .catch(() => {})
+
+  return Response.json({ data: updated })
+}
 
 export async function GET(_req: Request, { params }: Params) {
   const current = await getCurrentRole()

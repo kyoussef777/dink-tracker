@@ -33,6 +33,7 @@ export interface EditableMatch {
   score2: number[]
   team1: { id: string; name: string } | null
   team2: { id: string; name: string } | null
+  round?: number
 }
 
 export interface TeamOption {
@@ -47,14 +48,18 @@ interface Props {
   courtOptions: string[]
   /** All teams in the bracket — lets admins move/swap teams into this match. */
   teamOptions?: TeamOption[]
+  /** Total rounds in the bracket — enables moving this match to another round. */
+  totalRounds?: number
 }
 
-export function MatchEditDialog({ open, onOpenChange, match, courtOptions, teamOptions = [] }: Props) {
+export function MatchEditDialog({ open, onOpenChange, match, courtOptions, teamOptions = [], totalRounds }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [court, setCourt] = useState<string>(match.court ?? UNASSIGNED)
   const [team1Id, setTeam1Id] = useState<string>(match.team1?.id ?? NONE)
   const [team2Id, setTeam2Id] = useState<string>(match.team2?.id ?? NONE)
+  const [round, setRound] = useState<string>(match.round != null ? String(match.round) : NONE)
+  const canEditRound = totalRounds != null && totalRounds > 1 && match.round != null
   const [games, setGames] = useState<Array<{ a: string; b: string }>>(() => {
     const len = Math.max(match.score1.length, match.score2.length, 1)
     return Array.from({ length: len }, (_, i) => ({
@@ -106,6 +111,9 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions, teamO
     if (canEditTeams) {
       body.team1Id = team1Id === NONE ? null : team1Id
       body.team2Id = team2Id === NONE ? null : team2Id
+    }
+    if (canEditRound && round !== NONE && Number(round) !== match.round) {
+      body.round = Number(round)
     }
     if (action === "reopen") {
       body.score1 = []
@@ -208,6 +216,27 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions, teamO
               </p>
             )}
           </div>
+
+          {canEditRound && (
+            <div className="space-y-2">
+              <Label>Round</Label>
+              <Select value={round} onValueChange={setRound}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: totalRounds! }, (_, i) => i + 1).map((r) => (
+                    <SelectItem key={r} value={String(r)}>
+                      Round {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Moving a match between rounds is manual — it won&apos;t rewire advancement.
+              </p>
+            </div>
+          )}
 
           {!bothTeams ? (
             <p className="text-sm text-muted-foreground">
