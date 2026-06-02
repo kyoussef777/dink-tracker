@@ -27,7 +27,7 @@ export async function POST(req: Request, { params }: Params) {
 
   const { id } = await params
   const tournament = await db.tournament.findFirst({
-    where: { id, createdBy: userId },
+    where: { id },
     include: { brackets: { include: { _count: { select: { teams: true } } } } },
   })
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 })

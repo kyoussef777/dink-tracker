@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if (data instanceof Response) return data
 
   const team = await db.team.findFirst({
-    where: { id: teamId, bracketId, bracket: { tournament: { createdBy: userId } } },
+    where: { id: teamId, bracketId },
     include: { bracket: { select: { tournamentId: true } }, players: { select: { email: true, userId: true } } },
   })
   if (!team) return Response.json({ error: "Not found" }, { status: 404 })
@@ -69,7 +69,7 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   const { id: bracketId, teamId } = await params
   const team = await db.team.findFirst({
-    where: { id: teamId, bracketId, bracket: { tournament: { createdBy: userId } } },
+    where: { id: teamId, bracketId },
     include: { bracket: { select: { tournamentId: true } } },
   })
   if (!team) return Response.json({ error: "Not found" }, { status: 404 })

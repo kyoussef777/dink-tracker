@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params
   const where =
     current.role === "ADMIN"
-      ? { id, createdBy: current.userId }
+      ? { id }
       : {
           id,
           brackets: { some: { teams: { some: { players: { some: { userId: current.userId } } } } } },
@@ -39,7 +39,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const data = await parseBody(req, TournamentUpdateSchema)
   if (data instanceof Response) return data
 
-  const existing = await db.tournament.findFirst({ where: { id, createdBy: userId } })
+  const existing = await db.tournament.findFirst({ where: { id } })
   if (!existing) return Response.json({ error: "Not found" }, { status: 404 })
 
   const tournament = await db.tournament.update({
@@ -59,7 +59,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   if (userId instanceof Response) return userId
 
   const { id } = await params
-  const existing = await db.tournament.findFirst({ where: { id, createdBy: userId } })
+  const existing = await db.tournament.findFirst({ where: { id } })
   if (!existing) return Response.json({ error: "Not found" }, { status: 404 })
 
   await db.tournament.delete({ where: { id } })

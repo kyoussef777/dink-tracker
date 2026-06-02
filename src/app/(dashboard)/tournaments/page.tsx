@@ -28,7 +28,6 @@ export default async function TournamentsPage({
 
   const tournaments = await db.tournament.findMany({
     where: {
-      createdBy: current.userId,
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(q
         ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { venue: { contains: q, mode: "insensitive" } }] }

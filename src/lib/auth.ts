@@ -23,11 +23,20 @@ export async function getCurrentRole(): Promise<{ userId: string; role: Role } |
   const client = await clerkClient()
   const user = await client.users.getUser(userId)
   const stored = (user.publicMetadata?.role as Role | undefined) ?? null
-
-  if (stored === "ADMIN" || stored === "PLAYER") return { userId, role: stored }
-
   const email = user.primaryEmailAddress?.emailAddress
-  const role: Role = isAllowlistAdmin(email) ? "ADMIN" : "PLAYER"
+  const allowlisted = isAllowlistAdmin(email)
+
+  if (stored === "ADMIN" || stored === "PLAYER") {
+    // Re-promote a stored PLAYER who has since been added to ADMIN_EMAILS, so
+    // newly-added admins don't stay stuck as players from an earlier sign-in.
+    if (stored === "PLAYER" && allowlisted) {
+      await client.users.updateUserMetadata(userId, { publicMetadata: { role: "ADMIN" } })
+      return { userId, role: "ADMIN" }
+    }
+    return { userId, role: stored }
+  }
+
+  const role: Role = allowlisted ? "ADMIN" : "PLAYER"
   await client.users.updateUserMetadata(userId, { publicMetadata: { role } })
   return { userId, role }
 }
