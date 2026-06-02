@@ -33,22 +33,27 @@ export function generateBracket(format: string, teamCount: number): GeneratedBra
 export function generateSingleElimination(teamCount: number): GeneratedBracket {
   if (teamCount < 2) throw new Error("Need at least 2 teams")
 
-  const size = nextPowerOf2(teamCount)
-  const totalRounds = Math.log2(size)
-  const hasByes = size > teamCount
+  const base = Math.pow(2, Math.floor(Math.log2(teamCount))) // largest power of 2 <= teamCount
+  const overflow = teamCount - base
 
-  const firstRoundPairs = seededPairs(size)
+  // Perfect power of 2 — a clean single-elim with no play-in and no byes.
+  if (overflow === 0) return generatePerfectSingleElim(base)
+
+  // Otherwise build a play-in round: the bottom 2*overflow seeds play in for the
+  // last `overflow` slots of an otherwise-full bracket of size `base`. No byes —
+  // every team plays, and only a few matches are ready at the start so play
+  // trickles in (play-in winners feed the top seeds' first-round slots).
+  return generatePlayInSingleElim(teamCount, base, overflow)
+}
+
+/** Clean single-elimination bracket for an exact power-of-2 team count. */
+function generatePerfectSingleElim(size: number): GeneratedBracket {
+  const totalRounds = Math.log2(size)
   const matches: BracketMatch[] = []
   let pos = 1
 
-  for (const [s1, s2] of firstRoundPairs) {
-    matches.push({
-      position: pos++,
-      round: 1,
-      bracketSide: "WINNERS",
-      team1Seed: s1 <= teamCount ? s1 : null,
-      team2Seed: s2 <= teamCount ? s2 : null,
-    })
+  for (const [s1, s2] of seededPairs(size)) {
+    matches.push({ position: pos++, round: 1, bracketSide: "WINNERS", team1Seed: s1, team2Seed: s2 })
   }
 
   for (let r = 2; r <= totalRounds; r++) {
@@ -67,7 +72,69 @@ export function generateSingleElimination(teamCount: number): GeneratedBracket {
     }
   }
 
-  return { matches, totalRounds, hasByes }
+  return { matches, totalRounds, hasByes: false }
+}
+
+/**
+ * Single elimination with a play-in round. `base` is the main-bracket size (a
+ * power of 2 <= teamCount) and `overflow = teamCount - base` is the number of
+ * play-in matches. Round 1 is the play-in; rounds 2..(log2(base)+1) are the main
+ * bracket. Seeds 1..(base-overflow) enter the main bracket directly; the bottom
+ * 2*overflow seeds contest the play-in for the remaining `overflow` slots.
+ */
+function generatePlayInSingleElim(teamCount: number, base: number, overflow: number): GeneratedBracket {
+  const directCount = base - overflow // seeds 1..directCount skip the play-in
+  const matches: BracketMatch[] = []
+  let pos = 1
+
+  // Round 1 — play-in. Match i pairs seed (directCount+1+i) vs seed (teamCount-i),
+  // and its winner fills main-bracket slot for seed (directCount+1+i).
+  const playInPosBySlotSeed = new Map<number, number>()
+  for (let i = 0; i < overflow; i++) {
+    const slotSeed = directCount + 1 + i
+    matches.push({
+      position: pos,
+      round: 1,
+      bracketSide: "WINNERS",
+      team1Seed: slotSeed,
+      team2Seed: teamCount - i,
+    })
+    playInPosBySlotSeed.set(slotSeed, pos)
+    pos++
+  }
+
+  const mainRounds = Math.log2(base)
+  const mainStart: number[] = []
+
+  // Round 2 — main first round. A slot is either a direct seed or fed by a play-in.
+  mainStart[1] = pos
+  for (const [s1, s2] of seededPairs(base)) {
+    const m: BracketMatch = { position: pos++, round: 2, bracketSide: "WINNERS", team1Seed: null, team2Seed: null }
+    if (s1 <= directCount) m.team1Seed = s1
+    else m.fromMatch1Pos = playInPosBySlotSeed.get(s1)
+    if (s2 <= directCount) m.team2Seed = s2
+    else m.fromMatch2Pos = playInPosBySlotSeed.get(s2)
+    matches.push(m)
+  }
+
+  // Rounds 3.. — standard advancement among main-bracket matches.
+  for (let r = 2; r <= mainRounds; r++) {
+    mainStart[r] = pos
+    const matchesInRound = base / Math.pow(2, r)
+    for (let i = 0; i < matchesInRound; i++) {
+      matches.push({
+        position: pos++,
+        round: r + 1,
+        bracketSide: "WINNERS",
+        team1Seed: null,
+        team2Seed: null,
+        fromMatch1Pos: mainStart[r - 1] + i * 2,
+        fromMatch2Pos: mainStart[r - 1] + i * 2 + 1,
+      })
+    }
+  }
+
+  return { matches, totalRounds: mainRounds + 1, hasByes: false }
 }
 
 export function generateRoundRobin(teamCount: number): GeneratedBracket {
@@ -312,10 +379,6 @@ export function buildMatchRows(
       fromMatch2IsLoser: m.fromMatch2IsLoser ?? false,
     }
   })
-}
-
-function nextPowerOf2(n: number): number {
-  return Math.pow(2, Math.ceil(Math.log2(n)))
 }
 
 function seededPairs(size: number): [number, number][] {
