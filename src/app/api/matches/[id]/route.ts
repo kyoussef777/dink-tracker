@@ -107,6 +107,13 @@ export async function PATCH(req: Request, { params }: Params) {
   let advanced = false
   if (winnerId) {
     const loserId = winnerId === team1Id ? team2Id : winnerId === team2Id ? team1Id : null
+    // If this match had already advanced a different winner (the winner was
+    // changed, or the teams were swapped), pull the old winner — and anything
+    // downstream of it — back out first. Otherwise a stale team lingers in later
+    // rounds and dependent matches keep scores from the team that's no longer there.
+    if (match.winnerId && match.winnerId !== winnerId) {
+      await retractAdvancementInDb(match.bracket.id, match.position)
+    }
     advanced = await advanceWinnerInDb(match.bracket.id, match.position, winnerId, loserId)
     await maybeCompleteBracket(match.bracket.id)
   } else if (match.winnerId) {
