@@ -1,3 +1,4 @@
+"use client"
 import { Trophy } from "lucide-react"
 import { BracketTree } from "@/components/bracket/BracketTree"
 import { EditableMatchCard } from "@/components/match/EditableMatchCard"
