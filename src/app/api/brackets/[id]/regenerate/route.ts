@@ -1,6 +1,6 @@
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
-import { generateBracket, buildMatchRows } from "@/lib/bracket-engine"
+import { resetBracket } from "@/lib/bracket-reset"
 import { pusherServer } from "@/lib/pusher"
 
 type Params = { params: Promise<{ id: string }> }
@@ -17,45 +17,21 @@ export async function POST(_req: Request, { params }: Params) {
   const { id } = await params
   const bracket = await db.bracket.findFirst({
     where: { id },
-    include: {
-      tournament: { select: { id: true } },
-      teams: { orderBy: [{ seed: "asc" }, { id: "asc" }] },
-    },
+    select: { id: true, tournamentId: true },
   })
   if (!bracket) return Response.json({ error: "Not found" }, { status: 404 })
 
-  if (bracket.teams.length < 2) {
+  const outcome = await resetBracket(id)
+  if (outcome.status === "too_few") {
     return Response.json({ error: "Need at least 2 teams to generate a bracket" }, { status: 400 })
   }
-  if (bracket.format === "DOUBLE_ELIMINATION") {
-    const n = bracket.teams.length
-    if (n < 4 || (n & (n - 1)) !== 0 || n > 32) {
-      return Response.json(
-        { error: "Double elimination needs a power-of-2 team count (4, 8, 16, or 32)." },
-        { status: 400 }
-      )
-    }
+  if (outcome.status === "invalid") {
+    return Response.json({ error: outcome.error }, { status: 400 })
   }
 
-  const generated = generateBracket(bracket.format, bracket.teams.length)
-  // Normalize seeds to 1..N in current order so the engine's seed map lines up.
-  const seedToTeamId = new Map(bracket.teams.map((t, i) => [i + 1, t.id]))
-
-  await db.$transaction([
-    db.match.deleteMany({ where: { bracketId: id } }),
-    ...bracket.teams.map((t, i) =>
-      db.team.update({ where: { id: t.id }, data: { seed: i + 1 } })
-    ),
-    db.match.createMany({ data: buildMatchRows(generated, id, seedToTeamId) }),
-    db.bracket.update({
-      where: { id },
-      data: { rounds: generated.totalRounds, status: "ACTIVE" },
-    }),
-  ])
-
   await pusherServer
-    .trigger(`tournament-${bracket.tournament.id}`, "bracket-advanced", { bracketId: id })
+    .trigger(`tournament-${bracket.tournamentId}`, "bracket-advanced", { bracketId: id })
     .catch(() => {})
 
-  return Response.json({ data: { matchCount: generated.matches.length, rounds: generated.totalRounds } })
+  return Response.json({ data: { matchCount: outcome.matchCount, rounds: outcome.rounds } })
 }
