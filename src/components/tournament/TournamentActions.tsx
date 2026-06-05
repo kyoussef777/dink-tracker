@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Pencil, Trash2, CircleDot, RotateCcw } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, CircleDot, RotateCcw, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -52,6 +52,23 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
   const [deleting, setDeleting] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [cloning, setCloning] = useState(false)
+
+  async function handleClone() {
+    setCloning(true)
+    const toastId = toast.loading("Duplicating tournament...")
+    try {
+      const res = await fetch(`/api/tournaments/${tournament.id}/clone`, { method: "POST" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? "Failed")
+      toast.success("Tournament duplicated", { id: toastId })
+      router.push(`/tournaments/${json.data.id}`)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to duplicate", { id: toastId })
+      setCloning(false)
+    }
+  }
 
   async function handleStatus(status: TournamentStatus) {
     if (status === tournament.status) return
@@ -112,6 +129,10 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             <Pencil className="h-4 w-4" />
             Edit details
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={cloning} onSelect={() => handleClone()}>
+            <Copy className="h-4 w-4" />
+            Duplicate
           </DropdownMenuItem>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
