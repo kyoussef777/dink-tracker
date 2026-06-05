@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Pencil, Trash2, CircleDot } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, CircleDot, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { TournamentForm } from "./TournamentForm"
+import { TypeToConfirmDialog } from "@/components/shared/TypeToConfirmDialog"
 import type { Tournament } from "@prisma/client"
 
 export function TournamentActions({ tournament }: { tournament: Tournament }) {
@@ -49,6 +50,8 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   async function handleStatus(status: TournamentStatus) {
     if (status === tournament.status) return
@@ -63,6 +66,23 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
       router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update status")
+    }
+  }
+
+  async function handleReset() {
+    setResetting(true)
+    try {
+      const res = await fetch(`/api/tournaments/${tournament.id}/reset`, { method: "POST" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? "Failed")
+      const n = json.data?.bracketsReset ?? 0
+      toast.success(n > 0 ? `Reset ${n} ${n === 1 ? "bracket" : "brackets"} to round 1` : "Nothing to reset")
+      setResetOpen(false)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reset")
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -114,6 +134,10 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setResetOpen(true)}>
+            <RotateCcw className="h-4 w-4" />
+            Reset to round 1
+          </DropdownMenuItem>
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onSelect={() => setDeleteOpen(true)}
@@ -133,6 +157,17 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
           <TournamentForm tournament={tournament} onSuccess={() => setEditOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      <TypeToConfirmDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title="Reset this tournament to round 1?"
+        description="Wipes every score, result, and match across all brackets in this tournament and rebuilds each draw from its current teams. Teams and players are kept. This cannot be undone."
+        confirmLabel="Reset tournament"
+        pendingLabel="Resetting..."
+        busy={resetting}
+        onConfirm={handleReset}
+      />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

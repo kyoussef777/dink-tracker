@@ -68,6 +68,13 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions, teamO
     }))
   })
 
+  // Soft heads-up: a finished game can't end level. Flags tied games (both
+  // scores filled and equal) so a fat-fingered score gets noticed — never blocks.
+  const tiedGames = games
+    .map((g, i) => ({ n: i + 1, a: Number(g.a), b: Number(g.b), filled: g.a !== "" && g.b !== "" }))
+    .filter((g) => g.filled && !Number.isNaN(g.a) && !Number.isNaN(g.b) && g.a === g.b)
+    .map((g) => g.n)
+
   const canEditTeams = teamOptions.length > 0
   const resolvedT1 = teamOptions.find((t) => t.id === team1Id) ?? match.team1
   const resolvedT2 = teamOptions.find((t) => t.id === team2Id) ?? match.team2
@@ -290,6 +297,13 @@ export function MatchEditDialog({ open, onOpenChange, match, courtOptions, teamO
                 <Plus className="h-3.5 w-3.5" />
                 Add game
               </Button>
+
+              {tiedGames.length > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-500">
+                  {tiedGames.length === 1 ? `Game ${tiedGames[0]} is` : `Games ${tiedGames.join(", ")} are`} tied — a
+                  finished game can&apos;t end level. Double-check the score.
+                </p>
+              )}
 
               {/* Manual winner override — useful for forfeits/walkovers. */}
               <div className="flex flex-wrap items-center gap-2 pt-1">

@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Trash2, RefreshCw, Waves } from "lucide-react"
+import { MoreHorizontal, Trash2, RefreshCw, Waves, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { TypeToConfirmDialog } from "@/components/shared/TypeToConfirmDialog"
 
 export function BracketActions({
   bracketId,
@@ -40,6 +41,7 @@ export function BracketActions({
   const router = useRouter()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [regenOpen, setRegenOpen] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
   const [waveOpen, setWaveOpen] = useState(false)
   const [cap, setCap] = useState(String(maxActiveMatches))
   const [busy, setBusy] = useState(false)
@@ -60,6 +62,22 @@ export function BracketActions({
       router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update")
+      setBusy(false)
+    }
+  }
+
+  async function handleReset() {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/brackets/${bracketId}/regenerate`, { method: "POST" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? "Failed")
+      toast.success("Bracket reset to round 1")
+      setResetOpen(false)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reset")
+    } finally {
       setBusy(false)
     }
   }
@@ -112,6 +130,10 @@ export function BracketActions({
                 <RefreshCw className="h-4 w-4" />
                 Regenerate bracket
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setResetOpen(true)}>
+                <RotateCcw className="h-4 w-4" />
+                Reset to round 1
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
             </>
           )}
@@ -156,6 +178,17 @@ export function BracketActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TypeToConfirmDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title="Reset bracket to round 1?"
+        description="Wipes every score, result, and match in this bracket and rebuilds the draw from the current teams. Teams and players are kept. This cannot be undone."
+        confirmLabel="Reset bracket"
+        pendingLabel="Resetting..."
+        busy={busy}
+        onConfirm={handleReset}
+      />
 
       <AlertDialog open={regenOpen} onOpenChange={setRegenOpen}>
         <AlertDialogContent>
