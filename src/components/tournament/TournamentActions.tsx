@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Pencil, Trash2, CircleDot, RotateCcw } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, CircleDot, RotateCcw, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { TournamentForm } from "./TournamentForm"
+import { CloneTournamentDialog } from "./CloneTournamentDialog"
 import { TypeToConfirmDialog } from "@/components/shared/TypeToConfirmDialog"
 import type { Tournament } from "@prisma/client"
 
@@ -52,6 +53,7 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
   const [deleting, setDeleting] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [cloneOpen, setCloneOpen] = useState(false)
 
   async function handleStatus(status: TournamentStatus) {
     if (status === tournament.status) return
@@ -133,6 +135,10 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
               ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+          <DropdownMenuItem onSelect={() => setCloneOpen(true)}>
+            <Copy className="h-4 w-4" />
+            Duplicate
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setResetOpen(true)}>
             <RotateCcw className="h-4 w-4" />
@@ -157,6 +163,13 @@ export function TournamentActions({ tournament }: { tournament: Tournament }) {
           <TournamentForm tournament={tournament} onSuccess={() => setEditOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      <CloneTournamentDialog
+        open={cloneOpen}
+        onOpenChange={setCloneOpen}
+        tournamentId={tournament.id}
+        tournamentName={tournament.name}
+      />
 
       <TypeToConfirmDialog
         open={resetOpen}
