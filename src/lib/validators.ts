@@ -13,6 +13,14 @@ export const TournamentUpdateSchema = TournamentCreateSchema.partial().extend({
   status: z.enum(["DRAFT", "REGISTRATION", "ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
 })
 
+export const TournamentCloneSchema = z.object({
+  // Optional override for the copy's name; defaults to "Copy of {name}".
+  name: z.string().min(1, "Name is required").max(100).optional(),
+  // When false, the structure (brackets/teams/players/draws) is copied but all
+  // scores, winners, and progress are reset. Defaults to true.
+  includeResults: z.boolean().optional(),
+})
+
 export const BracketCreateSchema = z.object({
   tournamentId: z.string().cuid(),
   skillLevel: z.string().min(1, "Skill level is required").max(20),
@@ -76,6 +84,7 @@ export const NotifyPlayersSchema = z.object({
 
 export type TournamentCreate = z.infer<typeof TournamentCreateSchema>
 export type TournamentUpdate = z.infer<typeof TournamentUpdateSchema>
+export type TournamentClone = z.infer<typeof TournamentCloneSchema>
 export type BracketCreate = z.infer<typeof BracketCreateSchema>
 export type TeamCreate = z.infer<typeof TeamCreateSchema>
 export type TeamUpdate = z.infer<typeof TeamUpdateSchema>
