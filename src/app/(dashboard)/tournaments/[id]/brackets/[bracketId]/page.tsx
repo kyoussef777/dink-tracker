@@ -15,7 +15,7 @@ import { StandingsTable } from "@/components/bracket/StandingsTable"
 import { ChampionCard } from "@/components/bracket/ChampionCard"
 import { AddTeamsForm } from "@/components/bracket/AddTeamsForm"
 import { BracketActions } from "@/components/bracket/BracketActions"
-import { EditTeamButton } from "@/components/bracket/TeamManageDialog"
+import { EditTeamButton, AddTeamButton } from "@/components/bracket/TeamManageDialog"
 import { LiveSubscriber } from "@/components/shared/LiveSubscriber"
 import { computeStandings } from "@/lib/standings"
 import { bracketFormatLabel } from "@/lib/utils"
@@ -173,9 +173,12 @@ export default async function BracketDetailPage({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-xl font-semibold tracking-tight">Teams</h2>
               {isAdmin && (
-                <p className="text-xs text-muted-foreground">
-                  Tip: edit a team, then regenerate the bracket to rebuild the draw.
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Tip: add or edit a team, then regenerate the bracket to rebuild the draw.
+                  </p>
+                  <AddTeamButton bracketId={bracket.id} />
+                </div>
               )}
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
