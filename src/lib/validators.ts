@@ -27,6 +27,32 @@ export const BracketCreateSchema = z.object({
   format: z.enum(["SINGLE_ELIMINATION", "DOUBLE_ELIMINATION", "ROUND_ROBIN"]),
 })
 
+/**
+ * Teams added to a bracket via POST /api/brackets/[id]/teams. Accepts one or
+ * more teams: a single team is appended to an existing bracket, while the
+ * initial draw still requires at least 2 teams (enforced in the route).
+ */
+export const AddBracketTeamsSchema = z.object({
+  teams: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(100),
+        players: z
+          .array(
+            z.object({
+              name: z.string().min(1).max(100),
+              email: z.string().email().optional(),
+              phone: z.string().max(30).optional(),
+              rating: z.number().min(0).max(7).optional(),
+            })
+          )
+          .min(1)
+          .max(4),
+      })
+    )
+    .min(1),
+})
+
 export const TeamCreateSchema = z.object({
   bracketId: z.string().cuid(),
   name: z.string().min(1).max(100),
@@ -86,6 +112,7 @@ export type TournamentCreate = z.infer<typeof TournamentCreateSchema>
 export type TournamentUpdate = z.infer<typeof TournamentUpdateSchema>
 export type TournamentClone = z.infer<typeof TournamentCloneSchema>
 export type BracketCreate = z.infer<typeof BracketCreateSchema>
+export type AddBracketTeams = z.infer<typeof AddBracketTeamsSchema>
 export type TeamCreate = z.infer<typeof TeamCreateSchema>
 export type TeamUpdate = z.infer<typeof TeamUpdateSchema>
 export type MatchUpdate = z.infer<typeof MatchUpdateSchema>

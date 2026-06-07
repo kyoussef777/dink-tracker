@@ -46,17 +46,19 @@ export function TeamManageDialog({
   onOpenChange,
 }: {
   bracketId: string
-  team: ManagedTeam
+  /** Omit to add a new team; provide to edit an existing one. */
+  team?: ManagedTeam
   open: boolean
   onOpenChange: (v: boolean) => void
 }) {
   const router = useRouter()
+  const isEdit = team != null
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [name, setName] = useState(team.name)
-  const [seed, setSeed] = useState(team.seed != null ? String(team.seed) : "")
+  const [name, setName] = useState(team?.name ?? "")
+  const [seed, setSeed] = useState(team?.seed != null ? String(team.seed) : "")
   const [players, setPlayers] = useState(
-    team.players.length > 0
+    team && team.players.length > 0
       ? team.players.map((p) => ({ name: p.name, email: p.email ?? "", phone: p.phone ?? "" }))
       : [{ name: "", email: "", phone: "" }]
   )
@@ -75,24 +77,31 @@ export function TeamManageDialog({
       toast.error("Add at least one player")
       return
     }
+    const mappedPlayers = cleaned.map((p) => ({
+      name: p.name.trim(),
+      email: p.email.trim() || undefined,
+      phone: p.phone.trim() || undefined,
+    }))
     setSaving(true)
     try {
-      const res = await fetch(`/api/brackets/${bracketId}/teams/${team.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          seed: seed.trim() === "" ? null : Number(seed),
-          players: cleaned.map((p) => ({
-            name: p.name.trim(),
-            email: p.email.trim() || undefined,
-            phone: p.phone.trim() || undefined,
-          })),
-        }),
-      })
+      const res = isEdit
+        ? await fetch(`/api/brackets/${bracketId}/teams/${team.id}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              name: name.trim(),
+              seed: seed.trim() === "" ? null : Number(seed),
+              players: mappedPlayers,
+            }),
+          })
+        : await fetch(`/api/brackets/${bracketId}/teams`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ teams: [{ name: name.trim(), players: mappedPlayers }] }),
+          })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error ?? "Failed to update team")
-      toast.success("Team updated")
+      if (!res.ok) throw new Error(json.error ?? (isEdit ? "Failed to update team" : "Failed to add team"))
+      toast.success(isEdit ? "Team updated" : "Team added. Regenerate the bracket to include it in the draw.")
       onOpenChange(false)
       router.refresh()
     } catch (err) {
@@ -103,6 +112,7 @@ export function TeamManageDialog({
   }
 
   async function handleDelete() {
+    if (!team) return
     setSaving(true)
     try {
       const res = await fetch(`/api/brackets/${bracketId}/teams/${team.id}`, { method: "DELETE" })
@@ -122,29 +132,39 @@ export function TeamManageDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit team</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit team" : "Add team"}</DialogTitle>
           <DialogDescription>
-            Rename, reseed, or update players. Removing or reseeding teams may require regenerating the bracket.
+            {isEdit
+              ? "Rename, reseed, or update players. Removing or reseeding teams may require regenerating the bracket."
+              : "Add a single team to this bracket. Regenerate the bracket afterward to include it in the draw."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-[1fr_5rem] gap-3">
+          {/* Seed is an edit-only concern; new teams are auto-seeded after the current ones. */}
+          <div className={isEdit ? "grid grid-cols-[1fr_5rem] gap-3" : ""}>
             <div className="space-y-2">
               <Label htmlFor="team-name">Team name</Label>
-              <Input id="team-name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="team-seed">Seed</Label>
               <Input
-                id="team-seed"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                value={seed}
-                onChange={(e) => setSeed(e.target.value)}
+                id="team-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="The Dinkers"
               />
             </div>
+            {isEdit && (
+              <div className="space-y-2">
+                <Label htmlFor="team-seed">Seed</Label>
+                <Input
+                  id="team-seed"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={seed}
+                  onChange={(e) => setSeed(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -202,27 +222,32 @@ export function TeamManageDialog({
         </div>
 
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setDeleteOpen(true)}
-            disabled={saving}
-          >
-            <Trash2 className="h-4 w-4" />
-            Remove team
-          </Button>
+          {isEdit ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+              disabled={saving}
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove team
+            </Button>
+          ) : (
+            <span className="hidden sm:block" />
+          )}
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
             <Button type="button" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Saving..." : isEdit ? "Save" : "Add team"}
             </Button>
           </div>
         </DialogFooter>
       </DialogContent>
 
+      {isEdit && (
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -244,6 +269,7 @@ export function TeamManageDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
     </Dialog>
   )
 }
@@ -264,6 +290,20 @@ export function EditTeamButton({ bracketId, team }: { bracketId: string; team: M
         <Pencil className="h-4 w-4" />
       </Button>
       {open && <TeamManageDialog bracketId={bracketId} team={team} open={open} onOpenChange={setOpen} />}
+    </>
+  )
+}
+
+/** Button that opens the team manager in "add" mode for a bracket. Admin only. */
+export function AddTeamButton({ bracketId }: { bracketId: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4" />
+        Add team
+      </Button>
+      {open && <TeamManageDialog bracketId={bracketId} open={open} onOpenChange={setOpen} />}
     </>
   )
 }
