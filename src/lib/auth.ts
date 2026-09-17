@@ -54,3 +54,16 @@ export async function setUserRole(userId: string, role: Role): Promise<void> {
   const client = await clerkClient()
   await client.users.updateUserMetadata(userId, { publicMetadata: { role } })
 }
+
+/** Bans or unbans a Clerk user, revoking their sessions so a ban takes effect immediately. */
+export async function setUserBanned(userId: string, banned: boolean): Promise<void> {
+  const client = await clerkClient()
+  if (banned) await client.users.banUser(userId)
+  else await client.users.unbanUser(userId)
+}
+
+/** Deletes a Clerk user. Callers must first unlink any DB records that reference the userId. */
+export async function deleteUserAccount(userId: string): Promise<void> {
+  const client = await clerkClient()
+  await client.users.deleteUser(userId)
+}

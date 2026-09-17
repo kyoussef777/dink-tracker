@@ -108,6 +108,11 @@ export const NotifyPlayersSchema = z.object({
   message: z.string().min(1, "Message is required").max(1000),
 })
 
+export const UserInviteSchema = z.object({
+  emailAddress: z.string().email("Enter a valid email"),
+  role: z.enum(["ADMIN", "PLAYER"]).default("PLAYER"),
+})
+
 export type TournamentCreate = z.infer<typeof TournamentCreateSchema>
 export type TournamentUpdate = z.infer<typeof TournamentUpdateSchema>
 export type TournamentClone = z.infer<typeof TournamentCloneSchema>
@@ -117,4 +122,5 @@ export type TeamCreate = z.infer<typeof TeamCreateSchema>
 export type TeamUpdate = z.infer<typeof TeamUpdateSchema>
 export type MatchUpdate = z.infer<typeof MatchUpdateSchema>
 export type BracketUpdate = z.infer<typeof BracketUpdateSchema>
+export type UserInvite = z.infer<typeof UserInviteSchema>
 export type NotifyPlayers = z.infer<typeof NotifyPlayersSchema>
